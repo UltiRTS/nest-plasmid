@@ -12,6 +12,8 @@ import { WsResponse } from '@nestjs/websockets';
 
 import { Server } from 'socket.io';
 
+// TODO: remove cors on production
+// You can test this in https://www.piesocket.com/socketio-tester
 @WebSocketGateway({
   cors: {
     origin: '*',
