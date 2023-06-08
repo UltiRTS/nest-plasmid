@@ -22,6 +22,7 @@ export interface Config {
 }
 
 export interface AppConfig {
+  port: number;
   logLevel: LogLevel;
   workerCount: number;
 }
@@ -43,6 +44,7 @@ export interface CacheConfig {
 
 const defaultConfig: Config = {
   app: {
+    port: 8081,
     logLevel: LogLevel.log,
     workerCount: os.cpus().length,
   },
@@ -58,6 +60,7 @@ const defaultConfig: Config = {
 };
 
 const envConfigMap: Record<string, string> = {
+  APP_PORT: 'app.port',
   APP_LOG_LEVEL: 'app.logLevel',
   APP_WORKER_COUNT: 'app.workerCount',
 

@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { Logger, LogLevel as NestLogLevel } from '@nestjs/common';
 
 export enum LogLevel {

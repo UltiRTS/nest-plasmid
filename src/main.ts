@@ -5,6 +5,8 @@ import { AppModule } from '@/app.module';
 import { useConfig } from '@/utils/config.util';
 import { LogLevels } from '@/utils/logger.util';
 
+import { WebsocketAdapter } from '@/modules/websocket/websocket.adapter';
+
 async function bootstrap() {
   const config = useConfig();
 
@@ -14,14 +16,16 @@ async function bootstrap() {
 
   // Swagger & OpenAPI
   const swaggerBuilder = new DocumentBuilder()
-    .setTitle('Supernode server')
+    .setTitle('Plasmid')
     .setVersion('1.0')
-    .addTag('supernodes')
+    .addTag('Plasmid')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerBuilder);
   SwaggerModule.setup('swagger', app, document);
 
-  await app.listen(8081);
+  app.useWebSocketAdapter(new WebsocketAdapter(app));
+
+  await app.listen(config.app.port);
 }
 
 bootstrap();
