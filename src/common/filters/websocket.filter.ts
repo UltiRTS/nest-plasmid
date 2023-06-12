@@ -11,7 +11,7 @@ export class WebsocketExceptionsFilter extends BaseWsExceptionFilter {
     client.send(
       JSON.stringify({
         status: 'error',
-        error: details,
+        error: { ...details, code: 'UNKNOWN' },
       }),
     );
   }
