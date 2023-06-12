@@ -19,6 +19,7 @@ import { PartialDeep } from '@/utils/type.util';
 export interface Config {
   app: AppConfig;
   dataSource: DataSourceConfig;
+  redis: RedisConfig;
 }
 
 export interface AppConfig {
@@ -36,6 +37,10 @@ export interface DataSourceConfig {
   database?: string;
   schema?: string;
   storage?: string;
+}
+
+export interface RedisConfig {
+  url: string;
 }
 
 export interface CacheConfig {
@@ -57,6 +62,9 @@ const defaultConfig: Config = {
     database: 'data.sqlite',
     schema: 'public',
   },
+  redis: {
+    url: 'redis://localhost:6379/0',
+  },
 };
 
 const envConfigMap: Record<string, string> = {
@@ -71,6 +79,9 @@ const envConfigMap: Record<string, string> = {
   DATA_SOURCE_PASSWORD: 'dataSource.password',
   DATA_SOURCE_DATABASE: 'dataSource.database',
   DATA_SOURCE_SCHEMA: 'dataSource.schema',
+
+  REDIS_HOST: 'redis.host',
+  REDIS_PORT: 'redis.port',
 };
 
 let computedConfig: Config | undefined = undefined;

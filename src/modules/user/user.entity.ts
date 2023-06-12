@@ -1,4 +1,3 @@
-import * as crypto from 'node:crypto';
 import {
   Column,
   Entity,
@@ -8,6 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 
 import { Confirmation } from '@/modules/confirmation/confirmation.entity';
 import { Chat } from '@/modules/chat/chat.entity';
@@ -24,9 +24,11 @@ export class User {
   username: string;
 
   @Column()
+  @Exclude()
   hash: string;
 
   @Column()
+  @Exclude()
   salt: string;
 
   @Column('int', { default: 0 })
@@ -36,6 +38,7 @@ export class User {
   exp: number;
 
   @Column('boolean', { default: false })
+  @Exclude()
   blocked: boolean;
 
   @Column('int', { default: 0 })
@@ -66,28 +69,6 @@ export class User {
 
   @OneToMany(() => InventoryItem, (inventory) => inventory.user)
   inventory: InventoryItem[];
-
-  static saltNhash(password: string) {
-    const salt = crypto.randomBytes(16).toString('hex');
-
-    // Hashing user's salt and password with 1000 iterations,
-
-    const hash = crypto
-      .pbkdf2Sync(password, salt, 1000, 64, 'sha512')
-      .toString('hex');
-
-    return {
-      salt,
-      hash,
-    };
-  }
-
-  verify(password: string) {
-    const hash = crypto
-      .pbkdf2Sync(password, this.salt, 1000, 64, 'sha512')
-      .toString('hex');
-    return this.hash === hash;
-  }
 }
 
 @Entity()

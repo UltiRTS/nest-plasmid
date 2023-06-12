@@ -40,3 +40,6 @@ lerna-debug.log*
 
 # docker-compose volumes
 deploy/docker/volumes
+
+# temp db
+data.sqlite
