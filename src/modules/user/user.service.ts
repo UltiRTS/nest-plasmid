@@ -76,7 +76,7 @@ export class UserService {
   }
 
   private hashPassword(password: string, salt: string): string {
-    return hash(password, { cost: 15, salt });
+    return hash(password, { cost: 12, salt });
   }
 
   private verifyPassword(password: string, hash: string): boolean {
