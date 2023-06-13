@@ -11,7 +11,8 @@ import { Server } from 'ws';
 import { v4 as uuidV4 } from 'uuid';
 
 import { ValidationPipe } from '@/common/pipes/validation.pipe';
-import { WebsocketExceptionsFilter } from '@/common/filters/websocket.filter';
+import { AllExceptionsFilter } from '@/common/filters/all.filter';
+import { BaseExceptionsFilter } from '@/common/filters/exception.filter';
 import { LoggerProvider } from '@/utils/logger.util';
 import { RedisService } from '@/modules/redis/redis.service';
 
@@ -40,8 +41,7 @@ export class WebsocketGateway extends LoggerProvider {
   @WebSocketServer()
   server: Server;
 
-  // handle websocket exceptions, you can throw `WsException`(import from `@nestjs/websocket`) in controller
-  @UseFilters(new WebsocketExceptionsFilter())
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   // Validation for typed data.
   // If you want to validate data, follow steps below:
   //   1. import `ValidationPipe` from `@/common/pipes/validation`
@@ -60,7 +60,7 @@ export class WebsocketGateway extends LoggerProvider {
     return await this.userService.register(data);
   }
 
-  @UseFilters(new WebsocketExceptionsFilter())
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('LOGIN')
   async userLogin(

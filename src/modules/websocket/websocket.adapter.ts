@@ -54,7 +54,7 @@ export class WebsocketAdapter extends WsAdapter {
     if (isError(message)) {
       return process({
         status: 'error',
-        error: { message: 'Invalid JSON message' },
+        error: { code: 'JSON_ERROR', message: 'Invalid JSON message' },
       });
     }
     const messageHandler = handlers.find(
