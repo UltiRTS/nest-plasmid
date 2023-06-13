@@ -6,11 +6,13 @@ import { WebSocket } from 'ws';
 export class AllExceptionsFilter extends BaseWsExceptionFilter {
   catch(error: Error, host: ArgumentsHost) {
     const client = host.switchToWs().getClient() as WebSocket;
+    const { seq } = host.switchToWs().getData();
     const details = error instanceof Object ? { ...error } : { message: error };
     client.send(
       JSON.stringify({
         status: 'error',
         error: { ...details, code: 'UNKNOWN' },
+        seq,
       }),
     );
   }

@@ -11,6 +11,8 @@ import {
   share,
   takeUntil,
   map,
+  from,
+  firstValueFrom,
 } from 'rxjs';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
@@ -28,9 +30,9 @@ export class WebsocketAdapter extends WsAdapter {
     const close$ = fromEvent(client, 'close').pipe(share(), first());
     const source$ = fromEvent(client, 'message').pipe(
       mergeMap((data) =>
-        this.bindMessageHandler(data, handlers, transform)
-          .pipe(filter((result) => !isNil(result)))
-          .pipe(map((result) => instanceToPlain(result))),
+        this.bindMessageHandler(data, handlers, transform).pipe(
+          filter((result) => !isNil(result)),
+        ),
       ),
       takeUntil(close$),
     );
@@ -38,7 +40,7 @@ export class WebsocketAdapter extends WsAdapter {
       if (client.readyState !== 1) {
         return;
       }
-      client.send(JSON.stringify({ status: 'success', data }));
+      client.send(JSON.stringify(data));
     };
 
     source$.subscribe(onMessage);
@@ -57,12 +59,22 @@ export class WebsocketAdapter extends WsAdapter {
         error: { code: 'JSON_ERROR', message: 'Invalid JSON message' },
       });
     }
+    const { seq, action } = message;
     const messageHandler = handlers.find(
-      (handler) => handler.message === message.action,
+      (handler) => handler.message === action,
     );
     if (!messageHandler) {
       return EMPTY;
     }
-    return process(messageHandler.callback(message.parameters));
+    const result = messageHandler.callback({ ...message.parameters, seq });
+
+    return process(
+      firstValueFrom(
+        from(result)
+          .pipe(filter((result) => !isNil(result)))
+          .pipe(map((result) => instanceToPlain(result)))
+          .pipe(map((result) => ({ status: 'success', data: result, seq }))),
+      ).catch(/* ignore error here */ () => undefined),
+    );
   }
 }

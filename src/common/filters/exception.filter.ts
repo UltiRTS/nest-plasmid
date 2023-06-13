@@ -11,12 +11,14 @@ export class BaseExceptionsFilter
 {
   catch(exception: BaseException, host: ArgumentsHost) {
     const client = host.switchToWs().getClient() as WebSocket;
+    const { seq } = host.switchToWs().getData();
     const details =
       exception instanceof Object ? { ...exception } : { message: exception };
     client.send(
       JSON.stringify({
         status: 'error',
         error: details,
+        seq,
       }),
     );
   }

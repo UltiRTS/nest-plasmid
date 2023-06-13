@@ -41,6 +41,7 @@ export class WebsocketGateway extends LoggerProvider {
   @WebSocketServer()
   server: Server;
 
+  // handle exceptions, you can throw any exceptions inherited from `BaseException`(import from `@/common/exception/base.exception`) in event
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   // Validation for typed data.
   // If you want to validate data, follow steps below:
