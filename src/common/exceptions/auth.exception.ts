@@ -5,3 +5,9 @@ export class AuthFailedException extends BaseException {
     super('AUTH_FAILED', message);
   }
 }
+
+export class UsernameTakenException extends BaseException {
+  constructor(message: string) {
+    super('USERNAME_TAKEN', message);
+  }
+}

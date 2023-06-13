@@ -2,7 +2,7 @@ import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 import { LoggerProvider } from '@/utils/logger.util';
-import { WsException } from '@nestjs/websockets';
+import { ValidationException } from '@/common/exceptions/validation.exception';
 
 @Injectable()
 export class ValidationPipe extends LoggerProvider implements PipeTransform {
@@ -17,7 +17,7 @@ export class ValidationPipe extends LoggerProvider implements PipeTransform {
     if (errors.length > 0) {
       const msg = Object.values(errors[0].constraints)[0]; // 只需要取第一个错误信息并返回即可
       this.logger.error(`Validation failed: ${msg}`);
-      throw new WsException(`Validation failed: ${msg}`);
+      throw new ValidationException(msg);
     }
     return value;
   }
