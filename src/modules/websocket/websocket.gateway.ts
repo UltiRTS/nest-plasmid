@@ -97,6 +97,7 @@ export class WebsocketGateway extends LoggerProvider {
   }
 
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('LEAVECHAT')
   async leaveChat(
@@ -108,12 +109,13 @@ export class WebsocketGateway extends LoggerProvider {
   }
 
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('SAYCHAT')
   async sayChat(
     @MessageBody() data: RoomSayDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<{}> {
+  ): Promise<Chat> {
     this.logger.debug('say chat: ', data);
     const chat = await this.chatService.sayRoom({
       ...data,
@@ -131,7 +133,7 @@ export class WebsocketGateway extends LoggerProvider {
         }
       }
     });
-    return {};
+    return chat;
   }
 
   // lifecycle reference: https://docs.nestjs.com/websockets/gateways#lifecycle-events
