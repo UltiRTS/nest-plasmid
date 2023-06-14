@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 
 import { User } from '@/modules/user/user.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class ChatRoom {
@@ -16,6 +17,7 @@ export class ChatRoom {
   @Column()
   roomName: string;
 
+  @Exclude()
   @Column({ default: '' })
   password: string;
 

@@ -30,6 +30,10 @@ export class RedisService implements OnModuleDestroy {
     await this.redis.set(key, JSON.stringify(value), _options);
   }
 
+  public async has(key: string): Promise<boolean> {
+    return (await this.redis.exists(key)) === 1;
+  }
+
   public async remove(key: string): Promise<void> {
     await this.redis.del(key);
   }

@@ -48,31 +48,42 @@ export class UserService {
     return inserted;
   }
 
-  async login(dto: UserLoginDto): Promise<User> {
-    const { username, password } = dto;
+  async login(dto: UserLoginDto & { clientId: string }): Promise<User> {
+    const { username, password, clientId } = dto;
+    if (!(await this.redisService.has(`client:${clientId}`))) {
+      // user is not logged in and idle for too long
+      throw new AuthFailedException('Client is expired.');
+    }
     const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
     if (!lockSuccess) {
       // lock exists, user is registering or doing something else
       throw new AuthFailedException('Invalid username or password.');
     }
-    const user = await this.userRepository.findOne({ where: { username } });
-    if (!user) {
-      // user does not exist
+    try {
+      const user = await this.userRepository.findOne({ where: { username } });
+      if (!user) {
+        // user does not exist
+        throw new AuthFailedException('Invalid username or password.');
+      }
+      if (!this.verifyPassword(password, user.hash)) {
+        // password is incorrect
+        throw new AuthFailedException('Invalid username or password.');
+      }
+      if (user.blocked) {
+        // user is blocked
+        throw new AuthFailedException('You have been blocked.');
+      }
+      await this.redisService.set(
+        `client:${clientId}`,
+        { userId: user.id },
+        { expire: 60 * 60 * 24 * 7 }, // once you logged in, you can stay for 7 days
+      );
       await this.redisService.unlock(`lock:user:${username}`);
-      throw new AuthFailedException('Invalid username or password.');
-    }
-    if (!this.verifyPassword(password, user.hash)) {
-      // password is incorrect
+      return user;
+    } catch (e) {
       await this.redisService.unlock(`lock:user:${username}`);
-      throw new AuthFailedException('Invalid username or password.');
+      throw e;
     }
-    if (user.blocked) {
-      // user is blocked
-      await this.redisService.unlock(`lock:user:${username}`);
-      throw new AuthFailedException('You have been blocked.');
-    }
-    await this.redisService.unlock(`lock:user:${username}`);
-    return user;
   }
 
   private hashPassword(password: string, salt: string): string {

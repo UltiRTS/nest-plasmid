@@ -14,6 +14,7 @@ import {
   from,
   firstValueFrom,
 } from 'rxjs';
+import { OPEN } from 'ws';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
 
@@ -37,7 +38,7 @@ export class WebsocketAdapter extends WsAdapter {
       takeUntil(close$),
     );
     const onMessage = (data: any) => {
-      if (client.readyState !== 1) {
+      if (client.readyState !== OPEN) {
         return;
       }
       client.send(JSON.stringify(data));
@@ -60,6 +61,7 @@ export class WebsocketAdapter extends WsAdapter {
       });
     }
     const { seq, action } = message;
+
     const messageHandler = handlers.find(
       (handler) => handler.message === action,
     );
