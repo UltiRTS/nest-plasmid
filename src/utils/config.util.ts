@@ -80,8 +80,7 @@ const envConfigMap: Record<string, string> = {
   DATA_SOURCE_DATABASE: 'dataSource.database',
   DATA_SOURCE_SCHEMA: 'dataSource.schema',
 
-  REDIS_HOST: 'redis.host',
-  REDIS_PORT: 'redis.port',
+  REDIS_URL: 'redis.url',
 };
 
 let computedConfig: Config | undefined = undefined;
