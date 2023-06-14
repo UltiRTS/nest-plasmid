@@ -1,7 +1,7 @@
 FROM node:lts-alpine as build
 WORKDIR /code
 
-RUN npm i -g cmake-js pnpm
+RUN npm i -g pnpm
 
 COPY . .
 
