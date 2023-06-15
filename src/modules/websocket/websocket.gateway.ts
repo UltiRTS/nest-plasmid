@@ -151,6 +151,7 @@ export class WebsocketGateway extends LoggerProvider {
   }
 
   handleDisconnect(client: WebSocketClient) {
+    this.redisService.remove(`user:${client.userId}`);
     this.redisService.remove(`client:${client.id}`);
   }
 }

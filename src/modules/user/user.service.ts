@@ -78,6 +78,11 @@ export class UserService {
         { userId: user.id },
         { expire: 60 * 60 * 24 * 7 }, // once you logged in, you can stay for 7 days
       );
+      await this.redisService.set(
+        `user:${user.id}`,
+        { clientId },
+        { expire: 60 * 60 * 24 * 7 },
+      );
       await this.redisService.unlock(`lock:user:${username}`);
       return user;
     } catch (e) {
