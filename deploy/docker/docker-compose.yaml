@@ -1,6 +1,7 @@
 # @format
 
 version: '3'
+name: nest-plasmid
 services:
   plasmid:
     image: ghcr.io/ultirts/nest-plasmid:nightly
