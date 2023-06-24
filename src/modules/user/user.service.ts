@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hash, verify } from '@ulti-rts/passlib';
-
+import _ from 'lodash';
 import { RedisService } from '@/modules/redis/redis.service';
 import {
   AuthFailedException,
@@ -13,7 +13,8 @@ import { User } from './user.entity';
 import { randomBytes } from 'crypto';
 import { UserRegisterDto } from './dtos/user.register.dto';
 import { UserLoginDto } from './dtos/user.login.dto';
-
+import { UserDumpDto } from './dtos/user.dump.dto';
+import { DumpableUser } from './dtos/user.dump.dto';
 @Injectable()
 export class UserService {
   constructor(
@@ -89,6 +90,36 @@ export class UserService {
       await this.redisService.unlock(`lock:user:${username}`);
       throw e;
     }
+  }
+  async dump(dto: UserDumpDto): Promise<DumpableUser> {
+    const { id } = dto;
+    const user = await this.userRepository.findOne({ where: { id } });
+    const { hash, salt, ...dumped } = user;
+    const friendsOnline = dumped.friends
+      .filter(async (friend) => await this.redisService.has(`user:${friend}`))
+      .map((friend) => friend.username);
+    let rooms = dumped.chats.map((chat) => chat.room);
+    rooms = _.uniqBy(rooms, (room) => room.id);
+
+    return {
+      accessLevel: dumped.accessLevel,
+      username: dumped.username,
+      id: dumped.id,
+      rglike: null,
+      exp: dumped.exp,
+      winCount: dumped.winCount,
+      loseCount: dumped.loseCount,
+      confirmations: dumped.confirmations,
+      friends: dumped.friends.map((friend) => friend.username),
+      friendsOnline: friendsOnline,
+      inventory: dumped.inventory,
+      blocked: dumped.blocked,
+      chatRooms: rooms.reduce((acc, room) => {
+        acc[room.id.toString()] = room;
+        return acc;
+      }, {}),
+      firendsMarked: dumped.marks,
+    };
   }
 
   private hashPassword(password: string, salt: string): string {
