@@ -93,12 +93,15 @@ export class UserService {
   }
   async dump(dto: UserDumpDto): Promise<DumpableUser> {
     const { id } = dto;
-    const user = await this.userRepository.findOne({ where: { id } });
-    const { hash, salt, ...dumped } = user;
+    const dumped = await this.userRepository.findOne({ where: { id } });
     const friendsOnline = dumped.friends
-      .filter(async (friend) => await this.redisService.has(`user:${friend}`))
-      .map((friend) => friend.username);
-    let rooms = dumped.chats.map((chat) => chat.room);
+      ? dumped.friends
+          .filter(
+            async (friend) => await this.redisService.has(`user:${friend}`),
+          )
+          .map((friend) => friend.username)
+      : [];
+    let rooms = dumped.chats ? dumped.chats.map((chat) => chat.room) : [];
     rooms = _.uniqBy(rooms, (room) => room.id);
 
     return {
@@ -109,16 +112,18 @@ export class UserService {
       exp: dumped.exp,
       winCount: dumped.winCount,
       loseCount: dumped.loseCount,
-      confirmations: dumped.confirmations,
-      friends: dumped.friends.map((friend) => friend.username),
+      confirmations: dumped.confirmations || [],
+      friends: dumped.friends
+        ? dumped.friends.map((friend) => friend.username)
+        : [],
       friendsOnline: friendsOnline,
-      inventory: dumped.inventory,
+      inventory: dumped.inventory || [],
       blocked: dumped.blocked,
       chatRooms: rooms.reduce((acc, room) => {
         acc[room.id.toString()] = room;
         return acc;
       }, {}),
-      firendsMarked: dumped.marks,
+      firendsMarked: dumped.marks || [],
     };
   }
 

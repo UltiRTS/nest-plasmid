@@ -28,6 +28,7 @@ import { ChatRoom, Chat } from '@/modules/chat/chat.entity';
 import { RoomJoinDto } from '@/modules/chat/dtos/room.join.dto';
 import { RoomLeaveDto } from '@/modules/chat/dtos/room.leave.dto';
 import { RoomSayDto } from '@/modules/chat/dtos/room.say.dto';
+import { DumpState } from '@/common/decorators/dump-state.decorater';
 
 type WebSocketClient = WebSocket & { id: string; userId?: number };
 
@@ -50,6 +51,8 @@ export class WebsocketGateway extends LoggerProvider {
   @WebSocketServer()
   server: Server<WebSocketClient>;
 
+  @DumpState((user: User) => user.id)
+  // transform the result to statedump format
   // handle exceptions, you can throw any exceptions inherited from `BaseException`(import from `@/common/exception/base.exception`) in event
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   // Validation for typed data.

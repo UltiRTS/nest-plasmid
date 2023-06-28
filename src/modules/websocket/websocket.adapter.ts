@@ -17,10 +17,16 @@ import {
 import { OPEN } from 'ws';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
-
+import { UserService } from '../user/user.service';
+import { WebsocketGateway } from './websocket.gateway';
+import { Obj2UserIdFn } from '@/utils/type.util';
 export class WebsocketAdapter extends WsAdapter {
+  private userService: UserService;
+  private gateway: WebsocketGateway;
   constructor(private readonly app: INestApplicationContext) {
     super(app);
+    this.userService = app.get(UserService);
+    this.gateway = app.get(WebsocketGateway);
   }
 
   public bindMessageHandlers(
@@ -65,18 +71,36 @@ export class WebsocketAdapter extends WsAdapter {
     const messageHandler = handlers.find(
       (handler) => handler.message === action,
     );
+
     if (!messageHandler) {
       return EMPTY;
     }
-    const result = messageHandler.callback({ ...message.parameters, seq });
-
+    const transformFn: Obj2UserIdFn = Reflect.getMetadata(
+      `transform:${action}`,
+      this.gateway,
+    );
+    let result = messageHandler.callback({ ...message.parameters, seq });
+    result = result.then((data) => this.dumpUsers(data, transformFn));
     return process(
       firstValueFrom(
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
+          // .pipe(map((result) => this.dumpUsers(result, transformFn)))
           .pipe(map((result) => ({ status: 'success', data: result, seq }))),
       ).catch(/* ignore error here */ () => undefined),
     );
+  }
+
+  private async dumpUsers(obj: any, transformFn: Obj2UserIdFn | undefined) {
+    if (!transformFn) {
+      return obj;
+    }
+    const ids = transformFn(obj);
+    if (Array.isArray(ids)) {
+      return Promise.all(ids.map((id) => this.userService.dump({ id })));
+    }
+    let res = this.userService.dump({ id: ids });
+    return res;
   }
 }
