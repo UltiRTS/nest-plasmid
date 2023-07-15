@@ -15,11 +15,15 @@ import { UserRegisterDto } from './dtos/user.register.dto';
 import { UserLoginDto } from './dtos/user.login.dto';
 import { UserDumpDto } from './dtos/user.dump.dto';
 import { DumpableUser } from './dtos/user.dump.dto';
+import { UserState } from '../redis/dtos/redis.user.dto';
+import { Adventure } from '../adventure/adventure.entity';
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Adventure)
+    private readonly adventureRepository: Repository<Adventure>,
     private readonly redisService: RedisService,
   ) {}
 
@@ -56,7 +60,11 @@ export class UserService {
       throw new AuthFailedException('Client is expired.');
     }
     const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
-    if (!lockSuccess) {
+    const stateLockSuccess = await this.redisService.lock(
+      `lock:userState:${username}`,
+    );
+
+    if (!lockSuccess || !stateLockSuccess) {
       // lock exists, user is registering or doing something else
       throw new AuthFailedException('Invalid username or password.');
     }
@@ -74,6 +82,13 @@ export class UserService {
         // user is blocked
         throw new AuthFailedException('You have been blocked.');
       }
+      // Prepare user state for Redis
+      user.confirmations = user.confirmations.filter((c) => !c.claimed);
+      const userState = UserState.from(user);
+      // let adv = await this.findAdventure(userState.adventure);
+      await this.redisService.set(`userState:${username}`, userState);
+
+      await this.userRepository.save(user);
       await this.redisService.set(
         `client:${clientId}`,
         { userId: user.id },
@@ -84,11 +99,12 @@ export class UserService {
         { clientId },
         { expire: 60 * 60 * 24 * 7 },
       );
-      await this.redisService.unlock(`lock:user:${username}`);
       return user;
     } catch (e) {
-      await this.redisService.unlock(`lock:user:${username}`);
       throw e;
+    } finally {
+      await this.redisService.unlock(`lock:userState:${username}`);
+      await this.redisService.unlock(`lock:user:${username}`);
     }
   }
   async dump(dto: UserDumpDto): Promise<DumpableUser> {
@@ -133,5 +149,18 @@ export class UserService {
 
   private verifyPassword(password: string, hash: string): boolean {
     return verify(password, hash);
+  }
+
+  private async findAdventure(id: number): Promise<Adventure | null> {
+    let adv = await this.redisService.get(`adventure:${id}`);
+    if (adv) {
+      return adv;
+    }
+    // Add Adventure State to redis, see the link below fo details
+    // https://github.com/UltiRTS/ts-plasmid/blob/redis/lib/states/rougue/adventure.ts
+    adv = await this.adventureRepository.findOne({ where: { id } });
+    if (adv) {
+      await this.redisService.set(`adventure:${id}`, adv);
+    }
   }
 }
