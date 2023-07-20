@@ -107,41 +107,6 @@ export class UserService {
       await this.redisService.unlock(`lock:user:${username}`);
     }
   }
-  async dump(dto: UserDumpDto): Promise<DumpableUser> {
-    const { id } = dto;
-    const dumped = await this.userRepository.findOne({ where: { id } });
-    const friendsOnline = dumped.friends
-      ? dumped.friends
-          .filter(
-            async (friend) => await this.redisService.has(`user:${friend}`),
-          )
-          .map((friend) => friend.username)
-      : [];
-    let rooms = dumped.chats ? dumped.chats.map((chat) => chat.room) : [];
-    rooms = _.uniqBy(rooms, (room) => room.id);
-
-    return {
-      accessLevel: dumped.accessLevel,
-      username: dumped.username,
-      id: dumped.id,
-      rglike: null,
-      exp: dumped.exp,
-      winCount: dumped.winCount,
-      loseCount: dumped.loseCount,
-      confirmations: dumped.confirmations || [],
-      friends: dumped.friends
-        ? dumped.friends.map((friend) => friend.username)
-        : [],
-      friendsOnline: friendsOnline,
-      inventory: dumped.inventory || [],
-      blocked: dumped.blocked,
-      chatRooms: rooms.reduce((acc, room) => {
-        acc[room.id.toString()] = room;
-        return acc;
-      }, {}),
-      firendsMarked: dumped.marks || [],
-    };
-  }
 
   private hashPassword(password: string, salt: string): string {
     return hash(password, { cost: 12, salt });

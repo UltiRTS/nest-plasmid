@@ -80,7 +80,7 @@ export class WebsocketAdapter extends WsAdapter {
       this.gateway,
     );
     let result = messageHandler.callback({ ...message.parameters, seq });
-    result = result.then((data) => this.dumpUsers(data, transformFn));
+    result = result.then((data) => this.dumpState(data, transformFn));
     return process(
       firstValueFrom(
         from(result)
@@ -92,7 +92,7 @@ export class WebsocketAdapter extends WsAdapter {
     );
   }
 
-  private async dumpUsers(obj: any, transformFn: Obj2UserIdFn | undefined) {
+  private async dumpState(obj: any, transformFn: Obj2UserIdFn | undefined) {
     if (!transformFn) {
       return obj;
     }

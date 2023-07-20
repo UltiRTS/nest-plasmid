@@ -37,8 +37,7 @@ class GameService {
         mapId: mapId,
       });
     }
-    user.
 
-    return game;
+    return room;
   }
 }
