@@ -146,9 +146,7 @@ export class WebsocketGateway extends LoggerProvider {
 
   handleConnection(client: WebSocketClient) {
     client.id = uuidV4();
-    client.send(
-      JSON.stringify({ status: 'success', action: 'AUTHENTICATE_REQUIRED' }),
-    );
+
     // keep client alive for 1 hour
     this.redisService.set(`client:${client.id}`, {}, { expire: 60 * 60 * 1 });
   }
