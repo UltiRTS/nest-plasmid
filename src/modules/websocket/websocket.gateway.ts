@@ -51,7 +51,7 @@ export class WebsocketGateway extends LoggerProvider {
   @WebSocketServer()
   server: Server<WebSocketClient>;
 
-  @DumpState((user: User) => user.id)
+  @DumpState((user: User) => user.username)
   // transform the result to statedump format
   // handle exceptions, you can throw any exceptions inherited from `BaseException`(import from `@/common/exception/base.exception`) in event
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
@@ -73,7 +73,7 @@ export class WebsocketGateway extends LoggerProvider {
     this.logger.debug('register: ', data);
     return await this.userService.register(data);
   }
-
+  @DumpState((user: User) => user.username)
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('LOGIN')

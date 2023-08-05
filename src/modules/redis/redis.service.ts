@@ -55,7 +55,26 @@ export class RedisService implements OnModuleDestroy {
    * @returns {Promise<State>} the state of the current user
    */
   public async dump(username: string): Promise<State> {
-    const user: UserState = await this.get(`userState:${username}`);
+    const plainUserState = await this.get(`userState:${username}`);
+    const user = plainUserState ? UserState.fromRedis(plainUserState) : null;
+    if (!user) {
+      return {
+        chats: [],
+        games: [],
+        user: {
+          blocked: false,
+          chatRooms: {},
+          confirmations: [],
+          exp: 0,
+          friends: [],
+          game: null,
+          sanity: 42,
+          username: username,
+          friendsOnline: [],
+          friendsMarked: [],
+        },
+      };
+    }
     const game = user.game ? await this.get(`game:${user.game}`) : null;
     // const adventure = user.adventure
     //   ? await this.get(`adventure:${user.adventure}`)

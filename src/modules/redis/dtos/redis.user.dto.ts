@@ -49,6 +49,11 @@ export class UserState extends User {
     }
     return state;
   }
+  static fromRedis(records: any): UserState {
+    const state = new UserState();
+    Object.assign(state, records);
+    return state;
+  }
 
   public asDump(): UserStateDump {
     const {

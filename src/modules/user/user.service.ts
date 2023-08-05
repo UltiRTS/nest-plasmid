@@ -34,7 +34,9 @@ export class UserService {
       // lock exists, user is registering or doing something else
       throw new UsernameTakenException('This username is already taken.');
     }
-    const existed = await this.userRepository.findOne({ where: { username } });
+    const existed = await this.userRepository.findOne({
+      where: { username },
+    });
     if (existed) {
       // user already exists
       await this.redisService.unlock(`lock:user:${username}`);
@@ -69,7 +71,19 @@ export class UserService {
       throw new AuthFailedException('Invalid username or password.');
     }
     try {
-      const user = await this.userRepository.findOne({ where: { username } });
+      const user = await this.userRepository.findOne({
+        where: { username },
+        relations: {
+          friends: true,
+          confirmations: true,
+          chats: true,
+          adventures: true,
+          marks: true,
+          reverseMarks: true,
+          inventory: true,
+        },
+      });
+
       if (!user) {
         // user does not exist
         throw new AuthFailedException('Invalid username or password.');

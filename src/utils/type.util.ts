@@ -6,4 +6,4 @@ export type OverridesField<
   Discard extends keyof T = keyof {},
 > = Omit<T, (keyof Override & keyof T) | Discard> | Override;
 
-export type Obj2UserIdFn = (data: any) => number | number[];
+export type Obj2UsernameFn = (data: any) => string | string[];

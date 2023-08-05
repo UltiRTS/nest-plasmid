@@ -1,6 +1,6 @@
-import { Obj2UserIdFn } from '@/utils/type.util';
+import { Obj2UsernameFn } from '@/utils/type.util';
 
-export function DumpState(how: Obj2UserIdFn) {
+export function DumpState(how: Obj2UsernameFn) {
   return (
     target: any,
     propertyKey: string | symbol,
