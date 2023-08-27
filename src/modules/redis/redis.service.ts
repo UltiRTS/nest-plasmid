@@ -5,6 +5,7 @@ import { UserState } from './dtos/redis.user.dto';
 import { ChatRoom } from '../chat/chat.entity';
 import { ChatRoomState } from '@/utils/statedict';
 import { GameRoom } from '../game/dtos/game.game-room.dto';
+import _, { last } from 'lodash';
 export type RedisSetOptions = {
   expire?: number;
   keepExpireTime?: boolean;
@@ -91,25 +92,28 @@ export class RedisService implements OnModuleDestroy {
     ).then((r) => r.map((f) => f.username));
 
     // get chatrooms
-    let chatRooms = await Promise.all(
+    let chatRoomsArr = await Promise.all(
       user.chatRooms.map(async (r) => {
-        const room = await this.get(`chatRoom:${r}`);
+        const room = await this.get(`room:${r}`);
         return {
-          [r]: {
-            roomName: room.roomName,
-            createAt: room.createAt,
-            password: room.password,
-            members: room.members,
-            lastMessage: {
-              author: room.lastMessage.author,
-              content: room.lastMessage.content,
-              time: room.lastMessage.time,
-            },
-          },
+          roomName: room.roomName,
+          createAt: room.createAt,
+          password: room.password,
+          members: room.members,
+          lastMessage: room.lastMessage
+            ? {
+                author: room.lastMessage.author,
+                content: room.lastMessage.content,
+                time: room.lastMessage.time,
+              }
+            : null,
         };
       }),
-    ).then((r) => r.reduce((prev, curr) => ({ ...prev, ...curr }), {}));
-
+    );
+    let chatRooms: { [key: string]: ChatRoomState } = chatRoomsArr.reduce(
+      (acc, cur) => ({ ...acc, [cur.roomName]: cur }),
+      {},
+    );
     const userState = user.asDump();
     const userDump: UserDump = {
       ...userState,

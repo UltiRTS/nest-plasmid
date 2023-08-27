@@ -29,7 +29,7 @@ export interface ChatRoomState {
   password: string;
   // IDs of the members
   members: string[];
-  lastMessage: { author: string; content: string; time: number };
+  lastMessage?: { author: string; content: string; time: number };
 }
 
 export interface Confirmation {

@@ -81,13 +81,14 @@ export class WebsocketAdapter extends WsAdapter {
       this.gateway,
     );
     let result = messageHandler.callback({ ...message.parameters, seq });
-    result = result.then((data) => this.dumpState(data, transformFn));
+    // result = result.then((data) => this.dumpState(data, transformFn));
     return process(
       firstValueFrom(
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
-          // .pipe(map((result) => this.dumpUsers(result, transformFn)))
+          // .pipe(map((result) => transformFn(result)))
+          .pipe(map((result) => this.dumpState(result, transformFn)))
           .pipe(
             map((result) => ({
               status: 'success',

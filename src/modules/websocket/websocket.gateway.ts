@@ -32,7 +32,11 @@ import { PingResponse } from '../ping/ping.entity';
 import { PingService } from '../ping/ping.service';
 import { DumpState } from '@/common/decorators/dump-state.decorater';
 
-type WebSocketClient = WebSocket & { id: string; userId?: number };
+type WebSocketClient = WebSocket & {
+  id: string;
+  userId?: number;
+  username?: string;
+};
 
 // TODO: remove cors on production
 // You can test this in https://www.piesocket.com/socketio-tester
@@ -87,9 +91,11 @@ export class WebsocketGateway extends LoggerProvider {
     this.logger.debug('login: ', data);
     const user = await this.userService.login({ ...data, clientId: client.id });
     client.userId = user.id;
+    client.username = user.username;
     return user;
   }
 
+  @DumpState((username) => username)
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
@@ -97,9 +103,10 @@ export class WebsocketGateway extends LoggerProvider {
   async joinChat(
     @MessageBody() data: RoomJoinDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<ChatRoom> {
+  ): Promise<String> {
     this.logger.debug('join chat: ', data);
-    return await this.chatService.joinRoom({ ...data, userId: client.userId });
+    await this.chatService.joinRoom({ ...data, username: client.username });
+    return client.username;
   }
 
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())

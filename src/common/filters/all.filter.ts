@@ -10,7 +10,7 @@ export class AllExceptionsFilter extends BaseWsExceptionFilter {
     const details = error instanceof Object ? { ...error } : { message: error };
     client.send(
       JSON.stringify({
-        status: 'error',
+        action: 'NOTIFY',
         error: { ...details, code: 'UNKNOWN' },
         seq,
       }),

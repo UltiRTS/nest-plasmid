@@ -12,6 +12,8 @@ import { Chat, ChatRoom } from './chat.entity';
 import { RoomJoinDto } from './dtos/room.join.dto';
 import { RoomLeaveDto } from './dtos/room.leave.dto';
 import { RoomSayDto } from './dtos/room.say.dto';
+import { UserState } from '../redis/dtos/redis.user.dto';
+import { ChatRoomState } from '@/utils/statedict';
 
 @Injectable()
 export class ChatService extends LoggerProvider {
@@ -27,8 +29,13 @@ export class ChatService extends LoggerProvider {
     super();
   }
 
-  async joinRoom(dto: RoomJoinDto & { userId: number }): Promise<ChatRoom> {
-    const { userId, chatName, password } = dto;
+  async joinRoom(dto: RoomJoinDto & { username: string }): Promise<ChatRoom> {
+    const { username, chatName, password } = dto;
+    let userLock = await this.redisService.lock(`lock:user:${username}`);
+    let roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+    if (!userLock || !roomLock) {
+      throw new NoPrivilegesException('You are already in this room');
+    }
     let room = await this.chatRoomRepository.findOne({
       where: { roomName: chatName },
     });
@@ -39,17 +46,35 @@ export class ChatService extends LoggerProvider {
         password,
       });
       room = await this.chatRoomRepository.save(room);
-      await this.redisService.set(`room:${room.id}`, { users: [userId] });
+      await this.redisService.set<ChatRoomState>(`room:${room.roomName}`, {
+        members: [username],
+        createAt: new Date().toISOString(),
+        roomName: room.roomName,
+        password: room.password,
+      });
     }
-    const { users } = await this.redisService.get(`room:${room.id}`);
-    if (!users.includes(userId)) {
+    const roomState = await this.redisService.get<ChatRoomState>(
+      `room:${room.roomName}`,
+    );
+    const { members } = roomState;
+    if (!members.includes(username)) {
       if (room.password && room.password !== password) {
         throw new NoPrivilegesException('Wrong password');
       }
-      await this.redisService.set(`room:${room.id}`, {
-        users: [...users, userId],
+      (await this.redisService.set)<ChatRoomState>(`room:${room.roomName}`, {
+        ...roomState,
+        members: [...members, username],
       });
     }
+    let userState = await this.redisService.get<UserState>(
+      `userState:${username}`,
+    );
+    if (!(chatName in userState.chatRooms)) {
+      userState.chatRooms = [...userState.chatRooms, chatName];
+      await this.redisService.set(`userState:${username}`, userState);
+    }
+    await this.redisService.unlock(`lock:user:${username}`);
+    await this.redisService.unlock(`lock:room:${chatName}`);
     return room;
   }
 
