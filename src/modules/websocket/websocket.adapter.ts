@@ -75,7 +75,13 @@ export class WebsocketAdapter extends WsAdapter {
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
-          .pipe(map((result) => ({ status: 'success', data: result, seq }))),
+          .pipe(
+            map((result) => ({
+              action: action,
+              data: result,
+              seq,
+            })),
+          ),
       ).catch(/* ignore error here */ () => undefined),
     );
   }

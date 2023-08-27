@@ -5,7 +5,7 @@ import { PingResponse } from './ping.entity';
 export class PingService {
   async ping(): Promise<PingResponse> {
     return {
-      action: 'pong',
+      action: 'PONG',
       parameters: {},
     };
   }
