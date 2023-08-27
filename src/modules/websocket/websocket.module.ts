@@ -6,6 +6,7 @@ import { ChatModule } from '@/modules/chat/chat.module';
 
 import { WebsocketGateway } from './websocket.gateway';
 import { PingModule } from '../ping/ping.module';
+// import { ResponseTransformModule } from '../response-transform/response-transofrm.module';
 
 @Module({
   providers: [WebsocketGateway],

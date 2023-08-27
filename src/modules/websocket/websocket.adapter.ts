@@ -17,10 +17,17 @@ import {
 import { OPEN } from 'ws';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
-
+import { UserService } from '../user/user.service';
+import { WebsocketGateway } from './websocket.gateway';
+import { Obj2UsernameFn } from '@/utils/type.util';
+import { RedisService } from '../redis/redis.service';
 export class WebsocketAdapter extends WsAdapter {
+  private redisService: RedisService;
+  private gateway: WebsocketGateway;
   constructor(private readonly app: INestApplicationContext) {
     super(app);
+    this.redisService = app.get(RedisService);
+    this.gateway = app.get(WebsocketGateway);
   }
 
   public bindMessageHandlers(
@@ -65,24 +72,43 @@ export class WebsocketAdapter extends WsAdapter {
     const messageHandler = handlers.find(
       (handler) => handler.message === action,
     );
+
     if (!messageHandler) {
       return EMPTY;
     }
-    const result = messageHandler.callback({ ...message.parameters, seq });
-
+    const transformFn: Obj2UsernameFn = Reflect.getMetadata(
+      `transform:${action}`,
+      this.gateway,
+    );
+    let result = messageHandler.callback({ ...message.parameters, seq });
+    result = result.then((data) => this.dumpState(data, transformFn));
     return process(
       firstValueFrom(
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
+          // .pipe(map((result) => this.dumpUsers(result, transformFn)))
           .pipe(
             map((result) => ({
-              action: action,
-              data: result,
+              status: 'success',
+              action,
+              state: result,
               seq,
             })),
           ),
       ).catch(/* ignore error here */ () => undefined),
     );
+  }
+
+  private async dumpState(obj: any, transformFn: Obj2UsernameFn | undefined) {
+    if (!transformFn) {
+      return obj;
+    }
+    const ids = transformFn(obj);
+    if (Array.isArray(ids)) {
+      return await Promise.all(ids.map((id) => this.redisService.dump(id)));
+    }
+    let res = await this.redisService.dump(ids);
+    return res;
   }
 }

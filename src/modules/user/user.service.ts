@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hash, verify } from '@ulti-rts/passlib';
-
+import _ from 'lodash';
 import { RedisService } from '@/modules/redis/redis.service';
 import {
   LoginException,
@@ -13,12 +13,17 @@ import { User } from './user.entity';
 import { randomBytes } from 'crypto';
 import { UserRegisterDto } from './dtos/user.register.dto';
 import { UserLoginDto } from './dtos/user.login.dto';
-
+import { UserDumpDto } from './dtos/user.dump.dto';
+import { DumpableUser } from './dtos/user.dump.dto';
+import { UserState } from '../redis/dtos/redis.user.dto';
+import { Adventure } from '../adventure/adventure.entity';
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Adventure)
+    private readonly adventureRepository: Repository<Adventure>,
     private readonly redisService: RedisService,
   ) {}
 
@@ -29,7 +34,9 @@ export class UserService {
       // lock exists, user is registering or doing something else
       throw new RegisterException('This username is already taken.');
     }
-    const existed = await this.userRepository.findOne({ where: { username } });
+    const existed = await this.userRepository.findOne({
+      where: { username },
+    });
     if (existed) {
       // user already exists
       await this.redisService.unlock(`lock:user:${username}`);
@@ -55,12 +62,28 @@ export class UserService {
       throw new LoginException('Client is expired.');
     }
     const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
-    if (!lockSuccess) {
+    const stateLockSuccess = await this.redisService.lock(
+      `lock:userState:${username}`,
+    );
+
+    if (!lockSuccess || !stateLockSuccess) {
       // lock exists, user is registering or doing something else
       throw new LoginException('Invalid username or password.');
     }
     try {
-      const user = await this.userRepository.findOne({ where: { username } });
+      const user = await this.userRepository.findOne({
+        where: { username },
+        relations: {
+          friends: true,
+          confirmations: true,
+          chats: true,
+          adventures: true,
+          marks: true,
+          reverseMarks: true,
+          inventory: true,
+        },
+      });
+
       if (!user) {
         // user does not exist
         throw new LoginException('Invalid username or password.');
@@ -73,6 +96,13 @@ export class UserService {
         // user is blocked
         throw new LoginException('You have been blocked.');
       }
+      // Prepare user state for Redis
+      user.confirmations = user.confirmations.filter((c) => !c.claimed);
+      const userState = UserState.from(user);
+      // let adv = await this.findAdventure(userState.adventure);
+      await this.redisService.set(`userState:${username}`, userState);
+
+      await this.userRepository.save(user);
       await this.redisService.set(
         `client:${clientId}`,
         { userId: user.id },
@@ -83,11 +113,12 @@ export class UserService {
         { clientId },
         { expire: 60 * 60 * 24 * 7 },
       );
-      await this.redisService.unlock(`lock:user:${username}`);
       return user;
     } catch (e) {
-      await this.redisService.unlock(`lock:user:${username}`);
       throw e;
+    } finally {
+      await this.redisService.unlock(`lock:userState:${username}`);
+      await this.redisService.unlock(`lock:user:${username}`);
     }
   }
 
@@ -97,5 +128,18 @@ export class UserService {
 
   private verifyPassword(password: string, hash: string): boolean {
     return verify(password, hash);
+  }
+
+  private async findAdventure(id: number): Promise<Adventure | null> {
+    let adv = await this.redisService.get(`adventure:${id}`);
+    if (adv) {
+      return adv;
+    }
+    // Add Adventure State to redis, see the link below fo details
+    // https://github.com/UltiRTS/ts-plasmid/blob/redis/lib/states/rougue/adventure.ts
+    adv = await this.adventureRepository.findOne({ where: { id } });
+    if (adv) {
+      await this.redisService.set(`adventure:${id}`, adv);
+    }
   }
 }

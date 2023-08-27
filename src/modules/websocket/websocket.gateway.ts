@@ -30,6 +30,7 @@ import { RoomLeaveDto } from '@/modules/chat/dtos/room.leave.dto';
 import { RoomSayDto } from '@/modules/chat/dtos/room.say.dto';
 import { PingResponse } from '../ping/ping.entity';
 import { PingService } from '../ping/ping.service';
+import { DumpState } from '@/common/decorators/dump-state.decorater';
 
 type WebSocketClient = WebSocket & { id: string; userId?: number };
 
@@ -53,6 +54,8 @@ export class WebsocketGateway extends LoggerProvider {
   @WebSocketServer()
   server: Server<WebSocketClient>;
 
+  @DumpState((user: User) => user.username)
+  // transform the result to statedump format
   // handle exceptions, you can throw any exceptions inherited from `BaseException`(import from `@/common/exception/base.exception`) in event
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   // Validation for typed data.
@@ -73,7 +76,7 @@ export class WebsocketGateway extends LoggerProvider {
     this.logger.debug('register: ', data);
     return await this.userService.register(data);
   }
-
+  @DumpState((user: User) => user.username)
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('LOGIN')
