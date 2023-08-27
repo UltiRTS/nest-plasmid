@@ -1,13 +1,13 @@
 import { BaseException } from './base.exception';
 
-export class AuthFailedException extends BaseException {
+export class LoginException extends BaseException {
   constructor(message: string) {
-    super('AUTH_FAILED', message);
+    super('LOGIN', message);
   }
 }
 
-export class UsernameTakenException extends BaseException {
+export class RegisterException extends BaseException {
   constructor(message: string) {
-    super('USERNAME_TAKEN', message);
+    super('REGISTER', message);
   }
 }

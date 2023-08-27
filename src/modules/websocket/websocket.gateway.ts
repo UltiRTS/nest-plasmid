@@ -28,6 +28,8 @@ import { ChatRoom, Chat } from '@/modules/chat/chat.entity';
 import { RoomJoinDto } from '@/modules/chat/dtos/room.join.dto';
 import { RoomLeaveDto } from '@/modules/chat/dtos/room.leave.dto';
 import { RoomSayDto } from '@/modules/chat/dtos/room.say.dto';
+import { PingResponse } from '../ping/ping.entity';
+import { PingService } from '../ping/ping.service';
 
 type WebSocketClient = WebSocket & { id: string; userId?: number };
 
@@ -43,6 +45,7 @@ export class WebsocketGateway extends LoggerProvider {
     private readonly redisService: RedisService,
     private readonly userService: UserService,
     private readonly chatService: ChatService,
+    private readonly pingService: PingService,
   ) {
     super();
   }
@@ -136,6 +139,15 @@ export class WebsocketGateway extends LoggerProvider {
     return chat;
   }
 
+  @SubscribeMessage('PING')
+  async ping(
+    @MessageBody() data: any,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<PingResponse> {
+    this.logger.debug('ping: ', data);
+    return this.pingService.ping();
+  }
+
   // lifecycle reference: https://docs.nestjs.com/websockets/gateways#lifecycle-events
   afterInit() {
     this.logger.log('Websocket Server Initialized');
@@ -143,14 +155,15 @@ export class WebsocketGateway extends LoggerProvider {
 
   handleConnection(client: WebSocketClient) {
     client.id = uuidV4();
-    client.send(
-      JSON.stringify({ status: 'success', action: 'AUTHENTICATE_REQUIRED' }),
-    );
+    // client.send(
+    //   JSON.stringify({ status: 'success', action: 'AUTHENTICATE_REQUIRED' }),
+    // );
     // keep client alive for 1 hour
     this.redisService.set(`client:${client.id}`, {}, { expire: 60 * 60 * 1 });
   }
 
   handleDisconnect(client: WebSocketClient) {
+    this.logger.log(`Client disconnected: ${client.id}`);
     this.redisService.remove(`user:${client.userId}`);
     this.redisService.remove(`client:${client.id}`);
   }

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { HealthModule } from '@/modules/health/health.module';
+import { PingModule } from '@/modules/ping/ping.module';
 import { DatabaseModule } from '@/modules/database/database.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 
@@ -15,7 +15,7 @@ import { RedisModule } from '@/modules/redis/redis.module';
     // components
     RedisModule,
     DatabaseModule,
-    HealthModule,
+    PingModule,
     WebsocketModule,
     // business
     UserModule,

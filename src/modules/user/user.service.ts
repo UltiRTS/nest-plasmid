@@ -5,8 +5,8 @@ import { hash, verify } from '@ulti-rts/passlib';
 
 import { RedisService } from '@/modules/redis/redis.service';
 import {
-  AuthFailedException,
-  UsernameTakenException,
+  LoginException,
+  RegisterException,
 } from '@/common/exceptions/auth.exception';
 
 import { User } from './user.entity';
@@ -27,13 +27,13 @@ export class UserService {
     const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
     if (!lockSuccess) {
       // lock exists, user is registering or doing something else
-      throw new UsernameTakenException('This username is already taken.');
+      throw new RegisterException('This username is already taken.');
     }
     const existed = await this.userRepository.findOne({ where: { username } });
     if (existed) {
       // user already exists
       await this.redisService.unlock(`lock:user:${username}`);
-      throw new UsernameTakenException('This username is already taken.');
+      throw new RegisterException('This username is already taken.');
     }
     // start registering
     const salt = randomBytes(16).toString('hex');
@@ -52,26 +52,26 @@ export class UserService {
     const { username, password, clientId } = dto;
     if (!(await this.redisService.has(`client:${clientId}`))) {
       // user is not logged in and idle for too long
-      throw new AuthFailedException('Client is expired.');
+      throw new LoginException('Client is expired.');
     }
     const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
     if (!lockSuccess) {
       // lock exists, user is registering or doing something else
-      throw new AuthFailedException('Invalid username or password.');
+      throw new LoginException('Invalid username or password.');
     }
     try {
       const user = await this.userRepository.findOne({ where: { username } });
       if (!user) {
         // user does not exist
-        throw new AuthFailedException('Invalid username or password.');
+        throw new LoginException('Invalid username or password.');
       }
       if (!this.verifyPassword(password, user.hash)) {
         // password is incorrect
-        throw new AuthFailedException('Invalid username or password.');
+        throw new LoginException('Invalid username or password.');
       }
       if (user.blocked) {
         // user is blocked
-        throw new AuthFailedException('You have been blocked.');
+        throw new LoginException('You have been blocked.');
       }
       await this.redisService.set(
         `client:${clientId}`,

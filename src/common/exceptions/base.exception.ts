@@ -1,3 +1,3 @@
 export class BaseException {
-  constructor(public readonly code: string, public readonly message: string) {}
+  constructor(public readonly from: string, public readonly message: string) {}
 }

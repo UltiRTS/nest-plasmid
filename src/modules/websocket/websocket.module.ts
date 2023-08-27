@@ -5,9 +5,10 @@ import { UserModule } from '@/modules/user/user.module';
 import { ChatModule } from '@/modules/chat/chat.module';
 
 import { WebsocketGateway } from './websocket.gateway';
+import { PingModule } from '../ping/ping.module';
 
 @Module({
   providers: [WebsocketGateway],
-  imports: [RedisModule, UserModule, ChatModule],
+  imports: [RedisModule, UserModule, ChatModule, PingModule],
 })
 export class WebsocketModule {}
