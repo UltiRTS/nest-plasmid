@@ -30,8 +30,13 @@ import { RoomLeaveDto } from '@/modules/chat/dtos/room.leave.dto';
 import { RoomSayDto } from '@/modules/chat/dtos/room.say.dto';
 import { PingResponse } from '../ping/ping.entity';
 import { PingService } from '../ping/ping.service';
-import { DumpState } from '@/common/decorators/dump-state.decorater';
-
+import { StatePath } from '@/common/decorators/dump-state.decorater';
+import { ChatRoomState, State } from '@/utils/statedict';
+import { UserState } from '../redis/dtos/redis.user.dto';
+import { PartialDeep } from 'type-fest';
+import { DeepPartial } from 'typeorm';
+import { Response } from '@/utils/type.util';
+import { stat } from 'fs';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -57,8 +62,7 @@ export class WebsocketGateway extends LoggerProvider {
 
   @WebSocketServer()
   server: Server<WebSocketClient>;
-
-  @DumpState((user: User) => user.username)
+  clientsByUsername: { [id: string]: WebSocketClient } = {};
   // transform the result to statedump format
   // handle exceptions, you can throw any exceptions inherited from `BaseException`(import from `@/common/exception/base.exception`) in event
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
@@ -76,26 +80,28 @@ export class WebsocketGateway extends LoggerProvider {
     @MessageBody() data: UserRegisterDto,
     // you can close connection by `client.close()` or do something else
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<User> {
+  ): Promise<State> {
     this.logger.debug('register: ', data);
-    return await this.userService.register(data);
+    const user = await this.userService.register(data);
+    return await this.redisService.dump(user.username);
   }
-  @DumpState((user: User) => user.username)
+
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('LOGIN')
   async userLogin(
     @MessageBody() data: UserLoginDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<User> {
+  ): Promise<State> {
     this.logger.debug('login: ', data);
     const user = await this.userService.login({ ...data, clientId: client.id });
     client.userId = user.id;
     client.username = user.username;
-    return user;
+    this.clientsByUsername[user.username] = client;
+    return await this.redisService.dump(user.username);
   }
 
-  @DumpState((username) => username)
+  @StatePath((room: ChatRoomState) => `user.chatRooms.${room.roomName}`)
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
@@ -103,12 +109,28 @@ export class WebsocketGateway extends LoggerProvider {
   async joinChat(
     @MessageBody() data: RoomJoinDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<String> {
+  ): Promise<ChatRoomState> {
     this.logger.debug('join chat: ', data);
-    await this.chatService.joinRoom({ ...data, username: client.username });
-    return client.username;
+    const chatRoom = await this.chatService.joinRoom({
+      ...data,
+      username: client.username,
+    });
+
+    const msg: Response<string[]> = {
+      status: 'success',
+      action: 'JOINCHAT',
+      state: chatRoom.members,
+      path: `user.chatRooms.${chatRoom.roomName}.members`,
+      seq: -1,
+    };
+    const otherMembers = chatRoom.members.filter(
+      (username) => username !== client.username,
+    );
+    this.broadcastMessage(msg, otherMembers);
+    return chatRoom;
   }
 
+  @StatePath('user.chatRooms')
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
@@ -118,9 +140,25 @@ export class WebsocketGateway extends LoggerProvider {
     @ConnectedSocket() client: WebSocketClient,
   ): Promise<{}> {
     this.logger.debug('leave chat: ', data);
-    return await this.chatService.leaveRoom({ ...data, userId: client.userId });
+    const rooms = await this.chatService.leaveRoom({
+      ...data,
+      username: client.username,
+    });
+    const chatRoom = await this.redisService.get<ChatRoomState>(
+      `room:${data.chatName}`,
+    );
+    const msg: Response<string[]> = {
+      status: 'success',
+      action: 'LEAVECHAT',
+      state: chatRoom.members,
+      path: `user.chatRooms.${chatRoom.roomName}.members`,
+      seq: -1,
+    };
+    this.broadcastMessage(msg, chatRoom.members);
+    return rooms;
   }
 
+  @StatePath((chat: ChatRoom) => `user.chatRooms.${chat.roomName}`)
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
@@ -128,25 +166,41 @@ export class WebsocketGateway extends LoggerProvider {
   async sayChat(
     @MessageBody() data: RoomSayDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<Chat> {
+  ): Promise<ChatRoomState> {
     this.logger.debug('say chat: ', data);
-    const chat = await this.chatService.sayRoom({
+    const chatRoom = await this.chatService.sayRoom({
       ...data,
-      userId: client.userId,
+      username: client.username,
     });
     // notify all user in chat room
-    const { users } = await this.redisService.get(`room:${chat.room.id}`);
-    this.server.clients.forEach((_client) => {
-      if (_client.userId && users.includes(_client.userId)) {
-        // skip self
-        if (_client.id === client.id) return;
-        if (_client.readyState === OPEN) {
-          // TODO: structure chat message
-          _client.send(JSON.stringify(instanceToPlain(chat)));
-        }
+    const stateChange: PartialDeep<State> = {
+      user: {
+        chatRooms: {
+          [chatRoom.roomName]: chatRoom,
+        },
+      },
+    };
+    const msg: Response<ChatRoomState> = {
+      status: 'success',
+      action: 'JOINCHAT',
+      path: `user.chatRooms.${chatRoom.roomName}`,
+      state: chatRoom,
+      seq: -1,
+    };
+    const otherMembers = chatRoom.members.filter(
+      (username) => username !== client.username,
+    );
+    this.broadcastMessage(msg, otherMembers);
+    return chatRoom;
+  }
+
+  private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
+    recipeints.forEach((username) => {
+      const client = this.clientsByUsername[username];
+      if (client && client.readyState === OPEN) {
+        client.send(JSON.stringify(message));
       }
     });
-    return chat;
   }
 
   @SubscribeMessage('PING')
@@ -176,5 +230,8 @@ export class WebsocketGateway extends LoggerProvider {
     this.logger.log(`Client disconnected: ${client.id}`);
     this.redisService.remove(`user:${client.userId}`);
     this.redisService.remove(`client:${client.id}`);
+    if (this.clientsByUsername[client.username]) {
+      delete this.clientsByUsername[client.username];
+    }
   }
 }

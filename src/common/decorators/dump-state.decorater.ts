@@ -1,13 +1,13 @@
-import { Obj2UsernameFn } from '@/utils/type.util';
+import { Obj2String as Obj2StringFn } from '@/utils/type.util';
 
-export function DumpState(how: Obj2UsernameFn) {
+export function StatePath(path: string | Obj2StringFn) {
   return (
     target: any,
     propertyKey: string | symbol,
     propertyDescriptor: PropertyDescriptor,
   ) => {
     const msg = Reflect.getMetadata('message', propertyDescriptor.value);
-    Reflect.defineMetadata(`transform:${msg}`, how, target);
+    Reflect.defineMetadata(`statePath:${msg}`, path, target);
     return propertyDescriptor;
   };
 }

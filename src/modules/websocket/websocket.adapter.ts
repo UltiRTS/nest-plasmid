@@ -19,7 +19,7 @@ import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
 import { UserService } from '../user/user.service';
 import { WebsocketGateway } from './websocket.gateway';
-import { Obj2UsernameFn } from '@/utils/type.util';
+import { Obj2String } from '@/utils/type.util';
 import { RedisService } from '../redis/redis.service';
 export class WebsocketAdapter extends WsAdapter {
   private redisService: RedisService;
@@ -76,23 +76,23 @@ export class WebsocketAdapter extends WsAdapter {
     if (!messageHandler) {
       return EMPTY;
     }
-    const transformFn: Obj2UsernameFn = Reflect.getMetadata(
-      `transform:${action}`,
-      this.gateway,
-    );
+    let statePath = Reflect.getMetadata(`statePath:${action}`, this.gateway);
+    statePath = statePath ? statePath : '';
+    if (typeof statePath === 'function') {
+      statePath = statePath(message.parameters);
+    }
     let result = messageHandler.callback({ ...message.parameters, seq });
-    // result = result.then((data) => this.dumpState(data, transformFn));
     return process(
       firstValueFrom(
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
-          // .pipe(map((result) => transformFn(result)))
-          .pipe(map((result) => this.dumpState(result, transformFn)))
           .pipe(
             map((result) => ({
               status: 'success',
               action,
+              path:
+                typeof statePath === 'string' ? statePath : statePath(result),
               state: result,
               seq,
             })),
@@ -101,7 +101,7 @@ export class WebsocketAdapter extends WsAdapter {
     );
   }
 
-  private async dumpState(obj: any, transformFn: Obj2UsernameFn | undefined) {
+  private async dumpState(obj: any, transformFn: Obj2String | undefined) {
     if (!transformFn) {
       return obj;
     }

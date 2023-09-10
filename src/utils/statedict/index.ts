@@ -50,7 +50,7 @@ export interface UserDump {
   blocked: boolean;
   confirmations: Confirmation[];
   chatRooms: { [x: string]: ChatRoomState };
-  game: Game | null;
+  game?: Game;
 }
 
 export interface State {
