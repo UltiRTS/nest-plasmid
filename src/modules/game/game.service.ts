@@ -22,7 +22,7 @@ class GameService {
         'Unexpected error while fetching room info, please try again later.',
       );
     }
-    let user = await this.redisService.get<User | null | undefined>(caller);
+    const user = await this.redisService.get<User | null | undefined>(caller);
     if (user === null || user === undefined) {
       throw new JoinGameExcption('User not found.');
     }

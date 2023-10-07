@@ -81,7 +81,7 @@ export class WebsocketAdapter extends WsAdapter {
     if (typeof statePath === 'function') {
       statePath = statePath(message.parameters);
     }
-    let result = messageHandler.callback({ ...message.parameters, seq });
+    const result = messageHandler.callback({ ...message.parameters, seq });
     return process(
       firstValueFrom(
         from(result)
@@ -109,7 +109,7 @@ export class WebsocketAdapter extends WsAdapter {
     if (Array.isArray(ids)) {
       return await Promise.all(ids.map((id) => this.redisService.dump(id)));
     }
-    let res = await this.redisService.dump(ids);
+    const res = await this.redisService.dump(ids);
     return res;
   }
 }
