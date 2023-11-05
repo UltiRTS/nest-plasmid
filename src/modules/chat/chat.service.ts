@@ -33,8 +33,8 @@ export class ChatService extends LoggerProvider {
     dto: RoomJoinDto & { username: string },
   ): Promise<ChatRoomState> {
     const { username, chatName, password } = dto;
-    let userLock = await this.redisService.lock(`lock:user:${username}`);
-    let roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+    const userLock = await this.redisService.lock(`lock:user:${username}`);
+    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
     if (!userLock || !roomLock) {
       throw new NoPrivilegesException('You are already in this room');
     }
@@ -72,7 +72,7 @@ export class ChatService extends LoggerProvider {
         roomState,
       );
     }
-    let userState = await this.redisService.get<UserState>(
+    const userState = await this.redisService.get<UserState>(
       `userState:${username}`,
     );
     if (!(chatName in userState.chatRooms)) {
@@ -86,8 +86,8 @@ export class ChatService extends LoggerProvider {
 
   async leaveRoom(dto: RoomLeaveDto & { username: string }): Promise<string[]> {
     const { username, chatName } = dto;
-    let userLock = await this.redisService.lock(`lock:user:${username}`);
-    let roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+    const userLock = await this.redisService.lock(`lock:user:${username}`);
+    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
     if (!userLock || !roomLock) {
       throw new NoPrivilegesException('You are already in this room');
     }
@@ -99,7 +99,7 @@ export class ChatService extends LoggerProvider {
       `room:${room.id}`,
     );
     chatRoom.members = chatRoom.members.filter((member) => member !== username);
-    let userState = await this.redisService.get<UserState>(
+    const userState = await this.redisService.get<UserState>(
       `userState:${username}`,
     );
     userState.chatRooms = userState.chatRooms.filter(
@@ -119,7 +119,7 @@ export class ChatService extends LoggerProvider {
     dto: RoomSayDto & { username: string },
   ): Promise<ChatRoomState> {
     const { username, chatName, message } = dto;
-    let roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
     if (!roomLock) {
       throw new NoPrivilegesException('You are already in this room');
     }
