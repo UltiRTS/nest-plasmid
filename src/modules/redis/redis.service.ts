@@ -84,18 +84,40 @@ export class RedisService implements OnModuleDestroy {
     // check friends online
     // 1. filter all the friends that are online
     // 2. extract usernames
+
     const friendsOnline = await Promise.all(
-      user.friends.filter(async (f) => {
-        const friend = await this.get(`userState:${f}`);
-        return !!friend;
-      }),
-    ).then((r) => r.map((f) => f.username));
+      user.friends.map((friend) => this.get<UserState>(`userState:${friend}`)),
+    )
+      .then((states) =>
+        states.filter((state) => state !== null && state !== undefined),
+      )
+      .then((states) => states.map((state) => state.username));
 
     // get chatrooms
-    let chatRoomsArr = await Promise.all(
-      user.chatRooms.map(async (r) => {
-        const room = await this.get(`room:${r}`);
-        return {
+    // const chatRoomsArr = await Promise.all(
+    //   user.chatRooms.map(async (r) => {
+    //     const room = await this.get(`room:${r}`);
+    //     return {
+    //       roomName: room.roomName,
+    //       createAt: room.createAt,
+    //       password: room.password,
+    //       members: room.members,
+    //       lastMessage: room.lastMessage
+    //         ? {
+    //             author: room.lastMessage.author,
+    //             content: room.lastMessage.content,
+    //             time: room.lastMessage.time,
+    //           }
+    //         : null,
+    //     };
+    //   }),
+    // );
+    const chatRoomsArr = await Promise.all(
+      user.chatRooms.map((r) => this.get<ChatRoomState>(`room:${r}`)),
+    )
+      .then((rooms) => rooms.filter((room) => !!room))
+      .then((rooms) =>
+        rooms.map((room) => ({
           roomName: room.roomName,
           createAt: room.createAt,
           password: room.password,
@@ -107,10 +129,9 @@ export class RedisService implements OnModuleDestroy {
                 time: room.lastMessage.time,
               }
             : null,
-        };
-      }),
-    );
-    let chatRooms: { [key: string]: ChatRoomState } = chatRoomsArr.reduce(
+        })),
+      );
+    const chatRooms: { [key: string]: ChatRoomState } = chatRoomsArr.reduce(
       (acc, cur) => ({ ...acc, [cur.roomName]: cur }),
       {},
     );
