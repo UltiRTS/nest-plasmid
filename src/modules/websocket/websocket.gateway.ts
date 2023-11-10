@@ -173,13 +173,7 @@ export class WebsocketGateway extends LoggerProvider {
       username: client.username,
     });
     // notify all user in chat room
-    const stateChange: PartialDeep<State> = {
-      user: {
-        chatRooms: {
-          [chatRoom.roomName]: chatRoom,
-        },
-      },
-    };
+
     const msg: Response<ChatRoomState> = {
       status: 'success',
       action: 'JOINCHAT',
