@@ -1,24 +1,25 @@
 import { uniqueId } from 'lodash';
 export class GameRoom {
-  notes: string;
-  title: string;
-  hoster: string;
-  mapId: number;
-  ais: { [key: string]: { team: string } };
-  chickens: { [key: string]: { team: string } };
-  players: { [key: string]: GameRoomPlayer };
-  polls: { [key: string]: string[] };
-  id: number;
-  engineToken: string;
-  password: string;
-  isStarted: boolean;
-  responsibleAutohost: string;
-  autohostPort: number;
-  aiHosters: string[];
-  mod: string;
+  notes = '';
+  title = '';
+  hoster = '';
+  mapId = 0;
+  ais: { [key: string]: { team: string } } = {};
+  chickens: { [key: string]: { team: string } } = {};
+  players: { [key: string]: GameRoomPlayer } = {};
+  polls: { [key: string]: string[] } = {};
+  id: string;
+  engineToken = '';
+  password = '';
+  isStarted = false;
+  responsibleAutohost = '';
+  autohostPort = 0;
+  aiHosters: string[] = [];
+  mod = '';
   constructor(data: Partial<GameRoomConstructorParams>) {
     Object.assign(this, data);
     this.engineToken = uniqueId();
+    this.players = {};
   }
 }
 
@@ -26,13 +27,13 @@ interface GameRoomConstructorParams {
   title: string;
   hoster: string;
   mapId: number;
-  id: number;
+  id: string;
   password: string;
   autohost: string;
 }
 
 export interface GameRoomPlayer {
-  isSepc: boolean;
+  isSepctator: boolean;
   team: string;
-  hasmap: string;
+  hasmap: boolean;
 }

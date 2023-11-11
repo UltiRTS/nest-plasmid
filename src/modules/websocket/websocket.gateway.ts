@@ -22,7 +22,7 @@ import { UserRegisterDto } from '@/modules/user/dtos/user.register.dto';
 import { UserLoginDto } from '@/modules/user/dtos/user.login.dto';
 import { User } from '@/modules/user/user.entity';
 import { UserService } from '@/modules/user/user.service';
-
+import { GameService } from '@/modules/game/game.service';
 import { ChatService } from '@/modules/chat/chat.service';
 import { ChatRoom, Chat } from '@/modules/chat/chat.entity';
 import { RoomJoinDto } from '@/modules/chat/dtos/room.join.dto';
@@ -37,6 +37,8 @@ import { PartialDeep } from 'type-fest';
 import { DeepPartial } from 'typeorm';
 import { Response } from '@/utils/type.util';
 import { stat } from 'fs';
+import { JoinGameDto } from '../game/dtos/game.join.dto';
+import { GameRoom, GameRoomPlayer } from '../game/dtos/game.game-room.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -56,6 +58,7 @@ export class WebsocketGateway extends LoggerProvider {
     private readonly userService: UserService,
     private readonly chatService: ChatService,
     private readonly pingService: PingService,
+    private readonly gameService: GameService,
   ) {
     super();
   }
@@ -204,6 +207,34 @@ export class WebsocketGateway extends LoggerProvider {
   ): Promise<PingResponse> {
     this.logger.debug('ping: ', data);
     return this.pingService.ping();
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('JOINGAME')
+  async joinGame(
+    @MessageBody() joinGameDto: JoinGameDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    this.logger.debug('join game: ', { data: joinGameDto, client });
+    const username = client.username;
+    const room = await this.gameService.joinGame(joinGameDto, username);
+    const message: Response<GameRoomPlayer> = {
+      status: 'success',
+      action: 'JOINGAME',
+      path: `user.game.players.${client.username}`,
+      state: room.players[client.username],
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room;
   }
 
   // lifecycle reference: https://docs.nestjs.com/websockets/gateways#lifecycle-events

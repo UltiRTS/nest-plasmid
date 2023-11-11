@@ -6,10 +6,11 @@ import { ChatModule } from '@/modules/chat/chat.module';
 
 import { WebsocketGateway } from './websocket.gateway';
 import { PingModule } from '../ping/ping.module';
+import { GameModule } from '../game/game.module';
 // import { ResponseTransformModule } from '../response-transform/response-transofrm.module';
 
 @Module({
   providers: [WebsocketGateway],
-  imports: [RedisModule, UserModule, ChatModule, PingModule],
+  imports: [RedisModule, UserModule, ChatModule, PingModule, GameModule],
 })
 export class WebsocketModule {}

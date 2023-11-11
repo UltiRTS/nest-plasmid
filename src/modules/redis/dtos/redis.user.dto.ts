@@ -1,9 +1,9 @@
-import { Adventure } from '@/modules/adventure/adventure.entity';
-import { Game } from '@/modules/game/game.entity';
+import { GameRoom } from '@/modules/game/dtos/game.game-room.dto';
 import { InventoryItem, User } from '@/modules/user/user.entity';
 import { Confirmation as Confirmation2Dump } from '@/utils/statedict';
 export interface UserStateDump {
   id: number;
+  game: GameRoom | null;
   username: string;
   exp: number;
   blocked: boolean;
@@ -19,7 +19,7 @@ export interface UserStateDump {
  *
  */
 export class UserState extends User {
-  game: string | null = null;
+  public game: GameRoom | null = null;
   adventure: number | null = null;
   marks2dump: Mark2Dump[] = [];
   confirmations2dump: Confirmation2Dump[] = [];
@@ -64,6 +64,7 @@ export class UserState extends User {
       confirmations2dump,
       accessLevel,
       winCount,
+      game,
       loseCount,
       marks2dump,
       inventory,
@@ -71,6 +72,7 @@ export class UserState extends User {
     return {
       id,
       username,
+      game,
       exp,
       blocked,
       confirmations: confirmations2dump,

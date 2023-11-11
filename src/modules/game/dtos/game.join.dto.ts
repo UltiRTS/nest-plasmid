@@ -10,11 +10,7 @@ export class JoinGameDto {
   @IsString({ message: 'Game config must be a string' })
   password: string | null;
 
-  @IsNotEmpty({ message: 'Client ID is required' })
-  @IsString({ message: 'Client ID must be a string' })
-  caller: string;
-
   @IsNotEmpty({ message: 'Map ID is required' })
-  @IsNumber({}, { message: 'Map ID must be a number' })
-  mapId: number;
+  @IsString({ message: 'Map ID must be a number' })
+  mapId: string;
 }
