@@ -13,8 +13,6 @@ import { User } from './user.entity';
 import { randomBytes } from 'crypto';
 import { UserRegisterDto } from './dtos/user.register.dto';
 import { UserLoginDto } from './dtos/user.login.dto';
-import { UserDumpDto } from './dtos/user.dump.dto';
-import { DumpableUser } from './dtos/user.dump.dto';
 import { UserState } from '../redis/dtos/redis.user.dto';
 import { Adventure } from '../adventure/adventure.entity';
 @Injectable()

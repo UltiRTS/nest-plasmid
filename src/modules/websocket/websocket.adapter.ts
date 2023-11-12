@@ -76,12 +76,10 @@ export class WebsocketAdapter extends WsAdapter {
     if (!messageHandler) {
       return EMPTY;
     }
+
+    const result = messageHandler.callback({ ...message.parameters, seq });
     let statePath = Reflect.getMetadata(`statePath:${action}`, this.gateway);
     statePath = statePath ? statePath : '';
-    if (typeof statePath === 'function') {
-      statePath = statePath(message.parameters);
-    }
-    const result = messageHandler.callback({ ...message.parameters, seq });
     return process(
       firstValueFrom(
         from(result)
