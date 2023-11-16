@@ -16,16 +16,16 @@ export class GameService {
   async joinGame(dto: JoinGameDto, caller: string): Promise<GameRoom> {
     const { gameName, password, mapId } = dto;
     try {
-      const gameRoomLock = this.redisService.lock(`lock:gameRoom:${gameName}`);
-      const userLock = this.redisService.lock(`lock:userState:${caller}`);
+      const gameRoomLock = await this.redisService.lock(
+        `lock:gameRoom:${gameName}`,
+      );
+      const userLock = await this.redisService.lock(`lock:user:${caller}`);
       if (!gameRoomLock || !userLock) {
         throw new JoinGameExcption(
           'Unexpected error while fetching room info, please try again later.',
         );
       }
-      const user = await this.redisService.get<UserState | null | undefined>(
-        `userState:${caller}`,
-      );
+      const user = await this.redisService.get<User | null | undefined>(caller);
       if (user === null || user === undefined) {
         throw new JoinGameExcption('User not found.');
       }
@@ -37,27 +37,13 @@ export class GameService {
         room = new GameRoom({
           title: gameName,
           hoster: caller,
-          mapId: parseInt(mapId, 10),
-          password: password,
-          id: uuid(),
+          mapId: parseInt(mapId),
         });
-        this.redisService.set(`gameRoom:${room.title}`, room);
       }
-      if (room.password !== password) {
-        throw new JoinGameExcption('Wrong password.');
-      }
-      room.players[caller] = {
-        isSepctator: false,
-        team: 'A',
-        hasmap: false,
-      };
-
-      user.game = room;
-      this.redisService.set(caller, user);
       return room;
     } finally {
-      this.redisService.unlock(`lock:gameRoom:${gameName}`);
-      this.redisService.unlock(`lock:userState:${caller}`);
+      await this.redisService.unlock(`lock:gameRoom:${gameName}`);
+      await this.redisService.unlock(`lock:user:${caller}`);
     }
   }
 }

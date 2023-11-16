@@ -33,123 +33,134 @@ export class ChatService extends LoggerProvider {
     dto: RoomJoinDto & { username: string },
   ): Promise<ChatRoomState> {
     const { username, chatName, password } = dto;
-    const userLock = await this.redisService.lock(`lock:user:${username}`);
-    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
-    if (!userLock || !roomLock) {
-      throw new NoPrivilegesException('You are already in this room');
-    }
-    let room = await this.chatRoomRepository.findOne({
-      where: { roomName: chatName },
-    });
-
-    if (!room) {
-      room = this.chatRoomRepository.create({
-        roomName: chatName,
-        password,
-      });
-      room = await this.chatRoomRepository.save(room);
-      await this.redisService.set<ChatRoomState>(`room:${room.roomName}`, {
-        members: [username],
-        createAt: new Date().toISOString(),
-        roomName: room.roomName,
-        password: room.password,
-      });
-    }
-    let roomState = await this.redisService.get<ChatRoomState>(
-      `room:${room.roomName}`,
-    );
-    const { members } = roomState;
-    if (!members.includes(username)) {
-      if (room.password && room.password !== password) {
-        throw new NoPrivilegesException('Wrong password');
+    try {
+      const userLock = await this.redisService.lock(`lock:user:${username}`);
+      const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+      if (!userLock || !roomLock) {
+        throw new NoPrivilegesException('You are already in this room');
       }
-      roomState = {
-        ...roomState,
-        members: [...members, username],
-      };
-      await this.redisService.set<ChatRoomState>(
+      let room = await this.chatRoomRepository.findOne({
+        where: { roomName: chatName },
+      });
+
+      if (!room) {
+        room = this.chatRoomRepository.create({
+          roomName: chatName,
+          password,
+        });
+        room = await this.chatRoomRepository.save(room);
+        await this.redisService.set<ChatRoomState>(`room:${room.roomName}`, {
+          members: [username],
+          createAt: new Date().toISOString(),
+          roomName: room.roomName,
+          password: room.password,
+        });
+      }
+      let roomState = await this.redisService.get<ChatRoomState>(
         `room:${room.roomName}`,
-        roomState,
       );
+      const { members } = roomState;
+      if (!members.includes(username)) {
+        if (room.password && room.password !== password) {
+          throw new NoPrivilegesException('Wrong password');
+        }
+        roomState = {
+          ...roomState,
+          members: [...members, username],
+        };
+        await this.redisService.set<ChatRoomState>(
+          `room:${room.roomName}`,
+          roomState,
+        );
+      }
+      const userState = await this.redisService.get<UserState>(
+        `userState:${username}`,
+      );
+      if (!(chatName in userState.chatRooms)) {
+        userState.chatRooms = [...userState.chatRooms, chatName];
+        await this.redisService.set(`userState:${username}`, userState);
+      }
+
+      return roomState;
+    } finally {
+      await this.redisService.unlock(`lock:user:${username}`);
+      await this.redisService.unlock(`lock:room:${chatName}`);
     }
-    const userState = await this.redisService.get<UserState>(
-      `userState:${username}`,
-    );
-    if (!(chatName in userState.chatRooms)) {
-      userState.chatRooms = [...userState.chatRooms, chatName];
-      await this.redisService.set(`userState:${username}`, userState);
-    }
-    await this.redisService.unlock(`lock:user:${username}`);
-    await this.redisService.unlock(`lock:room:${chatName}`);
-    return roomState;
   }
 
   async leaveRoom(dto: RoomLeaveDto & { username: string }): Promise<string[]> {
     const { username, chatName } = dto;
-    const userLock = await this.redisService.lock(`lock:user:${username}`);
-    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
-    if (!userLock || !roomLock) {
-      throw new NoPrivilegesException('You are already in this room');
+    try {
+      const userLock = await this.redisService.lock(`lock:user:${username}`);
+      const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+      if (!userLock || !roomLock) {
+        throw new NoPrivilegesException('You are already in this room');
+      }
+
+      const room = await this.chatRoomRepository.findOne({
+        where: { roomName: chatName },
+      });
+      const chatRoom = await this.redisService.get<ChatRoomState>(
+        `room:${room.id}`,
+      );
+      chatRoom.members = chatRoom.members.filter(
+        (member) => member !== username,
+      );
+      const userState = await this.redisService.get<UserState>(
+        `userState:${username}`,
+      );
+      userState.chatRooms = userState.chatRooms.filter(
+        (chatRoom) => chatRoom !== chatName,
+      );
+
+      await this.redisService.set(`room:${room.id}`, chatRoom);
+      await this.redisService.set(`userState:${username}`, userState);
+
+      return userState.chatRooms;
+    } finally {
+      await this.redisService.unlock(`lock:user:${username}`);
+      await this.redisService.unlock(`lock:room:${chatName}`);
     }
-
-    const room = await this.chatRoomRepository.findOne({
-      where: { roomName: chatName },
-    });
-    const chatRoom = await this.redisService.get<ChatRoomState>(
-      `room:${room.id}`,
-    );
-    chatRoom.members = chatRoom.members.filter((member) => member !== username);
-    const userState = await this.redisService.get<UserState>(
-      `userState:${username}`,
-    );
-    userState.chatRooms = userState.chatRooms.filter(
-      (chatRoom) => chatRoom !== chatName,
-    );
-
-    await this.redisService.set(`room:${room.id}`, chatRoom);
-    await this.redisService.set(`userState:${username}`, userState);
-
-    await this.redisService.unlock(`lock:user:${username}`);
-    await this.redisService.unlock(`lock:room:${chatName}`);
-
-    return userState.chatRooms;
   }
 
   async sayRoom(
     dto: RoomSayDto & { username: string },
   ): Promise<ChatRoomState> {
     const { username, chatName, message } = dto;
-    const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
-    if (!roomLock) {
-      throw new NoPrivilegesException('You are already in this room');
-    }
-    const user = await this.userRepository.findOne({ where: { username } });
-    // get room data from db
-    const room = await this.chatRoomRepository.findOne({
-      where: { roomName: chatName },
-    });
-    // get room state from redis
-    const roomState = await this.redisService.get<ChatRoomState>(
-      `room:${room.id}`,
-    );
-    const { members } = roomState;
-    if (!members.includes(username)) {
-      throw new NoPrivilegesException('You are not in this room');
-    }
-    // make the new message last message
-    // save it to db and redis
-    roomState.lastMessage = {
-      author: username,
-      content: message,
-      time: Date.now(),
-    };
-    const chat = this.chatRepository.create({
-      message,
-      author: user,
-      room,
-    });
+    try {
+      const roomLock = await this.redisService.lock(`lock:room:${chatName}`);
+      if (!roomLock) {
+        throw new NoPrivilegesException('You are already in this room');
+      }
+      const user = await this.userRepository.findOne({ where: { username } });
+      // get room data from db
+      const room = await this.chatRoomRepository.findOne({
+        where: { roomName: chatName },
+      });
+      // get room state from redis
+      const roomState = await this.redisService.get<ChatRoomState>(
+        `room:${room.id}`,
+      );
+      const { members } = roomState;
+      if (!members.includes(username)) {
+        throw new NoPrivilegesException('You are not in this room');
+      }
+      // make the new message last message
+      // save it to db and redis
+      roomState.lastMessage = {
+        author: username,
+        content: message,
+        time: Date.now(),
+      };
+      const chat = this.chatRepository.create({
+        message,
+        author: user,
+        room,
+      });
 
-    this.redisService.unlock(`lock:room:${chatName}`);
-    return roomState;
+      return roomState;
+    } finally {
+      this.redisService.unlock(`lock:room:${chatName}`);
+    }
   }
 }
