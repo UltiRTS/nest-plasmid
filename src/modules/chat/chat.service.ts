@@ -148,11 +148,13 @@ export class ChatService extends LoggerProvider {
       }
       // make the new message last message
       // save it to db and redis
-      roomState.lastMessage = {
+      const msg = {
         author: username,
         content: message,
         time: Date.now(),
       };
+      roomState.lastMessage = msg;
+      roomState.chats.push(msg);
       const chat = this.chatRepository.create({
         message,
         author: user,
