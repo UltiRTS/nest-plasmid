@@ -54,6 +54,7 @@ export class ChatService extends LoggerProvider {
           createAt: new Date().toISOString(),
           roomName: room.roomName,
           password: room.password,
+          chats: [],
         });
       }
       let roomState = await this.redisService.get<ChatRoomState>(
@@ -139,7 +140,7 @@ export class ChatService extends LoggerProvider {
       });
       // get room state from redis
       const roomState = await this.redisService.get<ChatRoomState>(
-        `room:${room.id}`,
+        `room:${room.roomName}`,
       );
       const { members } = roomState;
       if (!members.includes(username)) {
@@ -157,7 +158,7 @@ export class ChatService extends LoggerProvider {
         author: user,
         room,
       });
-
+      await this.chatRepository.save(chat);
       return roomState;
     } finally {
       this.redisService.unlock(`lock:room:${chatName}`);

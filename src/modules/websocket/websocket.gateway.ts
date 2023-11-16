@@ -179,7 +179,7 @@ export class WebsocketGateway extends LoggerProvider {
 
     const msg: Response<ChatRoomState> = {
       status: 'success',
-      action: 'JOINCHAT',
+      action: 'SAYCHAT',
       path: `user.chatRooms.${chatRoom.roomName}`,
       state: chatRoom,
       seq: -1,
