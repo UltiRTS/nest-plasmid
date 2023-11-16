@@ -161,6 +161,7 @@ export class ChatService extends LoggerProvider {
         room,
       });
       await this.chatRepository.save(chat);
+      await this.redisService.set(`room:${room.roomName}`, roomState);
       return roomState;
     } finally {
       this.redisService.unlock(`lock:room:${chatName}`);
