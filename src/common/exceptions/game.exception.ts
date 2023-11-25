@@ -5,3 +5,9 @@ export class JoinGameExcption extends BaseException {
     super('JOINGAME', message);
   }
 }
+
+export class GameRoomException extends BaseException {
+  constructor(action: string, message: string) {
+    super(action, message);
+  }
+}

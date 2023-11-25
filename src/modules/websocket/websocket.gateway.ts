@@ -35,10 +35,13 @@ import { ChatRoomState, State } from '@/utils/statedict';
 import { UserState } from '../redis/dtos/redis.user.dto';
 import { PartialDeep } from 'type-fest';
 import { DeepPartial } from 'typeorm';
-import { Response } from '@/utils/type.util';
+import { Response, Select } from '@/utils/type.util';
 import { stat } from 'fs';
 import { JoinGameDto } from '../game/dtos/game.join.dto';
 import { GameRoom, GameRoomPlayer } from '../game/dtos/game.game-room.dto';
+import { SetTeamDto } from '../game/dtos/game.set-team.dto';
+import { SetMapDto } from '../game/dtos/game.set-map.dto';
+import { SetAiDto } from '../game/dtos/game.set-ai.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -179,7 +182,7 @@ export class WebsocketGateway extends LoggerProvider {
 
     const msg: Response<ChatRoomState> = {
       status: 'success',
-      action: 'JOINCHAT',
+      action: 'SAYCHAT',
       path: `user.chatRooms.${chatRoom.roomName}`,
       state: chatRoom,
       seq: -1,
@@ -226,6 +229,85 @@ export class WebsocketGateway extends LoggerProvider {
       action: 'JOINGAME',
       path: `user.game.players.${client.username}`,
       state: room.players[client.username],
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room;
+  }
+
+  @StatePath('user.game.players')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('SETTEAM')
+  async setTeam(
+    @MessageBody() data: SetTeamDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom['players']> {
+    const username = client.username;
+    const players = await this.gameService.setTeam(data, username);
+    const message: Response<GameRoom['players']> = {
+      status: 'success',
+      action: 'SETTEAM',
+      path: `user.game.players`,
+      state: players,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(players).filter((username) => username !== client.username),
+    );
+    return players;
+  }
+
+  @StatePath('user.game.mapId')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('SETMAP')
+  async setMap(
+    @MessageBody() data: SetMapDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom['mapId']> {
+    const username = client.username;
+    const room = await this.gameService.setMap(data, username);
+    const message: Response<GameRoom['mapId']> = {
+      status: 'success',
+      action: 'SETMAP',
+      path: `user.game.mapId`,
+      state: room.mapId,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room.mapId;
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('SETAI')
+  async setAi(
+    @MessageBody() data: SetAiDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.setAi(data, username);
+    const message: Response<GameRoom> = {
+      status: 'success',
+      action: 'SETAI',
+      path: `user.game`,
+      state: room,
       seq: -1,
     };
     this.broadcastMessage(

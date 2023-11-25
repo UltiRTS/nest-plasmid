@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hash, verify } from '@ulti-rts/passlib';
-import _ from 'lodash';
+import _, { set } from 'lodash';
 import { RedisService } from '@/modules/redis/redis.service';
 import {
   LoginException,
@@ -27,48 +27,52 @@ export class UserService {
 
   async register(dto: UserRegisterDto): Promise<User> {
     const { username, password } = dto;
-    const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
-    if (!lockSuccess) {
-      // lock exists, user is registering or doing something else
-      throw new RegisterException('This username is already taken.');
-    }
-    const existed = await this.userRepository.findOne({
-      where: { username },
-    });
-    if (existed) {
-      // user already exists
+    try {
+      const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
+      if (!lockSuccess) {
+        // lock exists, user is registering or doing something else
+        throw new RegisterException('This username is already taken.');
+      }
+      const existed = await this.userRepository.findOne({
+        where: { username },
+      });
+      if (existed) {
+        // user already exists
+        await this.redisService.unlock(`lock:user:${username}`);
+        throw new RegisterException('This username is already taken.');
+      }
+      // start registering
+      const salt = randomBytes(16).toString('hex');
+      const user = this.userRepository.create({
+        username,
+        hash: this.hashPassword(password, salt),
+        salt,
+      });
+      const inserted = await this.userRepository.save(user);
+      // finish registering
       await this.redisService.unlock(`lock:user:${username}`);
-      throw new RegisterException('This username is already taken.');
+      return inserted;
+    } finally {
+      await this.redisService.unlock(`lock:user${username}`);
     }
-    // start registering
-    const salt = randomBytes(16).toString('hex');
-    const user = this.userRepository.create({
-      username,
-      hash: this.hashPassword(password, salt),
-      salt,
-    });
-    const inserted = await this.userRepository.save(user);
-    // finish registering
-    await this.redisService.unlock(`lock:user:${username}`);
-    return inserted;
   }
 
   async login(dto: UserLoginDto & { clientId: string }): Promise<User> {
     const { username, password, clientId } = dto;
-    if (!(await this.redisService.has(`client:${clientId}`))) {
-      // user is not logged in and idle for too long
-      throw new LoginException('Client is expired.');
-    }
-    const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
-    const stateLockSuccess = await this.redisService.lock(
-      `lock:userState:${username}`,
-    );
-
-    if (!lockSuccess || !stateLockSuccess) {
-      // lock exists, user is registering or doing something else
-      throw new LoginException('Invalid username or password.');
-    }
     try {
+      if (!(await this.redisService.has(`client:${clientId}`))) {
+        // user is not logged in and idle for too long
+        throw new LoginException('Client is expired.');
+      }
+      const lockSuccess = await this.redisService.lock(`lock:user:${username}`);
+      const stateLockSuccess = await this.redisService.lock(
+        `lock:userState:${username}`,
+      );
+
+      if (!lockSuccess || !stateLockSuccess) {
+        // lock exists, user is registering or doing something else
+        throw new LoginException('Invalid username or password.');
+      }
       const user = await this.userRepository.findOne({
         where: { username },
         relations: {
@@ -111,6 +115,7 @@ export class UserService {
         { clientId },
         { expire: 60 * 60 * 24 * 7 },
       );
+      console.log('login success');
       return user;
     } catch (e) {
       throw e;
