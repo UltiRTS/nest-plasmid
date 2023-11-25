@@ -13,5 +13,4 @@ export const DatabaseModule = TypeOrmModule.forRoot({
   database: config.dataSource.database,
   autoLoadEntities: true,
   synchronize: true,
-  logging: true,
 });

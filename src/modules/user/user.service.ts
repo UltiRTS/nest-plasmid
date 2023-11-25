@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hash, verify } from '@ulti-rts/passlib';
-import _ from 'lodash';
+import _, { set } from 'lodash';
 import { RedisService } from '@/modules/redis/redis.service';
 import {
   LoginException,
@@ -73,7 +73,6 @@ export class UserService {
         // lock exists, user is registering or doing something else
         throw new LoginException('Invalid username or password.');
       }
-
       const user = await this.userRepository.findOne({
         where: { username },
         relations: {
@@ -116,6 +115,7 @@ export class UserService {
         { clientId },
         { expire: 60 * 60 * 24 * 7 },
       );
+      console.log('login success');
       return user;
     } catch (e) {
       throw e;
