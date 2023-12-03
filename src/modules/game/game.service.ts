@@ -12,6 +12,7 @@ import {
 import { SetTeamDto } from './dtos/game.set-team.dto';
 import { UserState } from '../redis/dtos/redis.user.dto';
 import { SetAiDto } from './dtos/game.set-ai.dto';
+import { SetSepctatorDto } from './dtos/game.set-spectator.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -212,6 +213,41 @@ export class GameService {
     }
   }
 
+  // todo Update this
+  async setSpectator(dto: SetSepctatorDto, caller: string): Promise<GameRoom> {
+    const { gameName, player } = dto;
+    let releaseFunc = undefined;
+    try {
+      const { room, release } = await this.acquireLock({
+        source: 'SET_SPECTATOR',
+        room: gameName,
+      });
+      releaseFunc = release;
+
+      if (room.hoster !== caller) {
+        throw new GameRoomException(
+          'SET_SPECTATOR',
+          'Only the hoster can set spectator.',
+        );
+      }
+
+      if (!Object.keys(room.players).includes(player)) {
+        throw new GameRoomException(
+          'SET_SPECTATOR',
+          'Player is not in the game room.',
+        );
+      }
+
+      room.players[player].isSepctator = true;
+
+      this.synchornizeGameRoomWithRedis(room);
+      return room;
+    } finally {
+      if (releaseFunc) {
+        releaseFunc();
+      }
+    }
+  }
   private async synchornizeGameRoomWithRedis(
     gameRoom: GameRoom,
   ): Promise<void> {
