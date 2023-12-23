@@ -49,6 +49,11 @@ export class ChatService extends LoggerProvider {
           password,
         });
         room = await this.chatRoomRepository.save(room);
+      }
+      let roomState = await this.redisService.get<ChatRoomState>(
+        `room:${room.roomName}`,
+      );
+      if (!roomState) {
         await this.redisService.set<ChatRoomState>(`room:${room.roomName}`, {
           members: [username],
           createAt: new Date().toISOString(),
@@ -57,7 +62,7 @@ export class ChatService extends LoggerProvider {
           chats: [],
         });
       }
-      let roomState = await this.redisService.get<ChatRoomState>(
+      roomState = await this.redisService.get<ChatRoomState>(
         `room:${room.roomName}`,
       );
       const { members } = roomState;

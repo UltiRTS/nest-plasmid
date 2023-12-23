@@ -16,9 +16,9 @@ export class RedisService implements OnModuleDestroy {
   public constructor(
     @Inject(REDIS_CLIENT) private readonly redis: RedisClient,
   ) {
-    if (process.env.NODE_ENV === 'development') {
-      this.redis.flushAll();
-    }
+    // if (process.env.NODE_ENV === 'development') {
+    //   this.redis.flushAll();
+    // }
   }
 
   public async get<T = any>(key: string): Promise<T> {

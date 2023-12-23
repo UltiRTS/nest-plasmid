@@ -18,16 +18,16 @@ import { OPEN } from 'ws';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
 import { UserService } from '../user/user.service';
-import { WebsocketGateway } from './websocket.gateway';
+import { GameGateway } from './gateways/websocket.gateway.game';
 import { Obj2String } from '@/utils/type.util';
 import { RedisService } from '../redis/redis.service';
 export class WebsocketAdapter extends WsAdapter {
   private redisService: RedisService;
-  private gateway: WebsocketGateway;
+  private gateway: GameGateway;
   constructor(private readonly app: INestApplicationContext) {
     super(app);
     this.redisService = app.get(RedisService);
-    this.gateway = app.get(WebsocketGateway);
+    this.gateway = app.get(GameGateway);
   }
 
   public bindMessageHandlers(
