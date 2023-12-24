@@ -76,7 +76,7 @@ export class ChatGateway extends LoggerProvider {
   async leaveChat(
     @MessageBody() data: RoomLeaveDto,
     @ConnectedSocket() client: WebSocketClient,
-  ): Promise<{}> {
+  ): Promise<string[]> {
     this.logger.debug('leave chat: ', data);
     const rooms = await this.chatService.leaveRoom({
       ...data,

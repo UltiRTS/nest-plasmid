@@ -8,13 +8,13 @@ import { GameGateway } from './gateways/websocket.gateway.game';
 import { PingModule } from '../ping/ping.module';
 import { GameModule } from '../game/game.module';
 import { ClientsModule } from '../clients/clients.module';
-import { LoginGateway } from './gateways/websocket.gateways.login';
+import { UserGateway } from './gateways/websocket.gateways.user';
 import { ChatGateway } from './gateways/websocket.gateways.chat';
 import { PingGateway } from './gateways/websocket.gateway.ping';
 // import { ResponseTransformModule } from '../response-transform/response-transofrm.module';
 
 @Module({
-  providers: [GameGateway, LoginGateway, ChatGateway, PingGateway],
+  providers: [GameGateway, UserGateway, ChatGateway, PingGateway],
   imports: [
     RedisModule,
     UserModule,
