@@ -24,7 +24,7 @@ import { Server } from 'ws';
     origin: '*',
   },
 })
-export class LoginGateway extends LoggerProvider {
+export class UserGateway extends LoggerProvider {
   constructor(
     private readonly redisService: RedisService,
     private readonly userService: UserService,
