@@ -133,4 +133,5 @@ export class ChatGateway extends LoggerProvider {
     this.broadcastMessage(msg, otherMembers);
     return chatRoom;
   }
+  async;
 }

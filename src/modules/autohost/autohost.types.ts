@@ -7,3 +7,9 @@ export interface AutohostResponse {
     id?: number;
   };
 }
+
+export interface AutohostAddrInfo {
+  addr: string;
+  port: number;
+  socket: WebSocket;
+}
