@@ -7,9 +7,15 @@ export class ClientsService extends LoggerProvider {
   constructor() {
     super();
   }
-
-  get(username: string): WebSocketClient | undefined {
-    return this.id2Clients[username];
+  get(usernames: string[]): WebSocketClient[];
+  get(username: string): WebSocketClient | undefined;
+  get(arg: any) {
+    if (Array.isArray(arg)) {
+      return arg.filter(a => a in this.id2Clients).map(a => this.id2Clients[a]);
+    }
+    if (typeof arg === "string") {
+      return this.id2Clients[arg]
+    }
   }
 
   set(username: string, client: WebSocketClient) {

@@ -8,7 +8,7 @@ import { UserService } from '@/modules/user/user.service';
 import { LoggerProvider } from '@/utils/logger.util';
 import { State } from '@/utils/statedict';
 import { WebSocketClient } from '@/utils/type.util';
-import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Inject, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { v4 as uuidV4 } from 'uuid';
 import {
   ConnectedSocket,
@@ -18,6 +18,8 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'ws';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @WebSocketGateway({
   cors: {
@@ -29,6 +31,7 @@ export class UserGateway extends LoggerProvider {
     private readonly redisService: RedisService,
     private readonly userService: UserService,
     private readonly clientsService: ClientsService,
+
   ) {
     super();
     this.logger.log('LoginGateway started');
