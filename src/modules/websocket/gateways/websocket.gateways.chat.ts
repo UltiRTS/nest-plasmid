@@ -38,7 +38,6 @@ export class ChatGateway extends LoggerProvider {
     private readonly chatService: ChatService,
     private readonly clientsService: ClientsService,
     private readonly redisService: RedisService,
-    @InjectQueue("messages") private readonly messageQueue: Queue, 
   ) {
     super();
   }
@@ -50,7 +49,6 @@ export class ChatGateway extends LoggerProvider {
   async joinChat(
     @MessageBody() data: RoomJoinDto,
     @ConnectedSocket() client: WebSocketClient,
-    
   ): Promise<ChatRoomState> {
     this.logger.debug('join chat: ', data);
     const chatRoom = await this.chatService.joinRoom({
@@ -100,10 +98,7 @@ export class ChatGateway extends LoggerProvider {
     return rooms;
   }
   private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
-    this.messageQueue.add("broadcast", {
-      recipeints,
-      message
-    })
+    this.clientsService.broadcast(recipeints, message);
   }
 
   @StatePath((chat: ChatRoom) => `user.chatRooms.${chat.roomName}`)

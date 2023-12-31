@@ -18,9 +18,6 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'ws';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -31,7 +28,6 @@ export class UserGateway extends LoggerProvider {
     private readonly redisService: RedisService,
     private readonly userService: UserService,
     private readonly clientsService: ClientsService,
-
   ) {
     super();
     this.logger.log('LoginGateway started');

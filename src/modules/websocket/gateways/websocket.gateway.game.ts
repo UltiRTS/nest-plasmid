@@ -43,7 +43,6 @@ export class GameGateway extends LoggerProvider {
   constructor(
     private readonly gameService: GameService,
     private readonly clientsService: ClientsService,
-    @InjectQueue("messages") private readonly broadcastQueue: Queue
   ) {
     super();
   }
@@ -163,9 +162,6 @@ export class GameGateway extends LoggerProvider {
     this.logger.log('Websocket Server Initialized');
   }
   private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
-    this.broadcastQueue.add("broadcast", {
-      recipeints,
-      message
-    })
+    this.clientsService.broadcast(recipeints, message);
   }
 }
