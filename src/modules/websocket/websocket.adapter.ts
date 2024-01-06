@@ -17,7 +17,6 @@ import {
 import { OPEN } from 'ws';
 import { isNil, attempt, isError } from 'lodash';
 import { instanceToPlain } from 'class-transformer';
-import { UserService } from '../user/user.service';
 import { GameGateway } from './gateways/websocket.gateway.game';
 import { Obj2String } from '@/utils/type.util';
 import { RedisService } from '../redis/redis.service';

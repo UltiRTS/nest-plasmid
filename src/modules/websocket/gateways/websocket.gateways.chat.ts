@@ -12,6 +12,7 @@ import { RedisService } from '@/modules/redis/redis.service';
 import { LoggerProvider } from '@/utils/logger.util';
 import { ChatRoomState } from '@/utils/statedict';
 import { WebSocketClient, Response } from '@/utils/type.util';
+import { InjectQueue } from '@nestjs/bull';
 import {
   UseFilters,
   UseGuards,
@@ -24,6 +25,7 @@ import {
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
+import { Queue } from 'bull';
 import { OPEN } from 'ws';
 
 @WebSocketGateway({
@@ -96,12 +98,7 @@ export class ChatGateway extends LoggerProvider {
     return rooms;
   }
   private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
-    recipeints.forEach((username) => {
-      const client = this.clientsService.get(username);
-      if (client && client.readyState === OPEN) {
-        client.send(JSON.stringify(message));
-      }
-    });
+    this.clientsService.broadcast(recipeints, message);
   }
 
   @StatePath((chat: ChatRoom) => `user.chatRooms.${chat.roomName}`)
@@ -133,5 +130,4 @@ export class ChatGateway extends LoggerProvider {
     this.broadcastMessage(msg, otherMembers);
     return chatRoom;
   }
-  async;
 }
