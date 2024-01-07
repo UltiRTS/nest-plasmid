@@ -67,7 +67,6 @@ export class WebsocketAdapter extends WsAdapter {
       });
     }
     const { seq, action } = message;
-
     const messageHandler = handlers.find(
       (handler) => handler.message === action,
     );
