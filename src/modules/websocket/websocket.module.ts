@@ -11,6 +11,7 @@ import { ClientsModule } from '../clients/clients.module';
 import { UserGateway } from './gateways/websocket.gateways.user';
 import { ChatGateway } from './gateways/websocket.gateways.chat';
 import { PingGateway } from './gateways/websocket.gateway.ping';
+
 // import { ResponseTransformModule } from '../response-transform/response-transofrm.module';
 
 @Module({

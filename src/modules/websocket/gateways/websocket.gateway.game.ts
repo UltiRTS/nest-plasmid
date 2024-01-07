@@ -6,7 +6,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
+import { Inject, UseFilters, UseGuards, UsePipes } from '@nestjs/common';
 import { Server, WebSocket, OPEN } from 'ws';
 
 import { ValidationPipe } from '@/common/pipes/validation.pipe';
@@ -24,6 +24,8 @@ import { SetTeamDto } from '../../game/dtos/game.set-team.dto';
 import { SetMapDto } from '../../game/dtos/game.set-map.dto';
 import { SetAiDto } from '../../game/dtos/game.set-ai.dto';
 import { ClientsService } from '../../clients/clients.service';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -160,11 +162,6 @@ export class GameGateway extends LoggerProvider {
     this.logger.log('Websocket Server Initialized');
   }
   private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
-    recipeints.forEach((username) => {
-      const client = this.clientsService.get(username);
-      if (client && client.readyState === OPEN) {
-        client.send(JSON.stringify(message));
-      }
-    });
+    this.clientsService.broadcast(recipeints, message);
   }
 }

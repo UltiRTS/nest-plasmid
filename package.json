@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@nestjs/axios": "^2.0.0",
+    "@nestjs/bull": "^10.0.1",
     "@nestjs/common": "^9.4.2",
     "@nestjs/core": "^9.4.2",
     "@nestjs/devtools-integration": "^0.1.4",
@@ -33,6 +34,7 @@
     "@sap/hana-client": "^2.16.26",
     "@ulti-rts/passlib": "1.0.1-alpha.2",
     "axios": "^1.4.0",
+    "bull": "^4.12.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "hdb-pool": "^0.1.6",

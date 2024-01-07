@@ -8,7 +8,7 @@ import { UserService } from '@/modules/user/user.service';
 import { LoggerProvider } from '@/utils/logger.util';
 import { State } from '@/utils/statedict';
 import { WebSocketClient } from '@/utils/type.util';
-import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Inject, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { v4 as uuidV4 } from 'uuid';
 import {
   ConnectedSocket,
@@ -18,7 +18,6 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'ws';
-
 @WebSocketGateway({
   cors: {
     origin: '*',
