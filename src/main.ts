@@ -25,9 +25,8 @@ async function bootstrap() {
 
   // Websocket
   app.useWebSocketAdapter(new WebsocketAdapter(app));
-  console.log("Starting server on: " + config.app.port)
-  await app.listen(config.app.port);
-  
+  console.log('Starting server on: ' + config.app.port);
+  await app.listen(config.app.port, '0.0.0.0');
 }
 
 bootstrap();

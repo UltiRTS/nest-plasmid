@@ -8,7 +8,14 @@ import { UserService } from '@/modules/user/user.service';
 import { LoggerProvider } from '@/utils/logger.util';
 import { State } from '@/utils/statedict';
 import { WebSocketClient } from '@/utils/type.util';
-import { Inject, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Inject,
+  Ip,
+  Req,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { v4 as uuidV4 } from 'uuid';
 import {
   ConnectedSocket,
@@ -18,6 +25,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server } from 'ws';
+import { IncomingMessage } from 'http';
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -74,8 +82,10 @@ export class UserGateway extends LoggerProvider {
     return await this.redisService.dump(user.username);
   }
 
-  handleConnection(client: WebSocketClient) {
+  handleConnection(client: WebSocketClient, msg: IncomingMessage) {
     client.id = uuidV4();
+    console.log({ addr: msg.socket.remoteAddress });
+    console.log({});
     // client.send(
     //   JSON.stringify({ status: 'success', action: 'AUTHENTICATE_REQUIRED' }),
     // );
