@@ -11,6 +11,7 @@ import { ConfirmationModule } from '@/modules/confirmation/confirmation.module';
 import { RedisModule } from '@/modules/redis/redis.module';
 import { BullModule } from '@nestjs/bull';
 import { useConfig } from './utils/config.util';
+import { AutohostModule } from './modules/autohost/autohost.module';
 const config = useConfig();
 const redisUrl = new URL(config.redis.url);
 console.log('redisHost', redisUrl.hostname);
@@ -35,6 +36,7 @@ const AppBullModule = BullModule.forRoot({
     ChatModule,
     ConfirmationModule,
     AppBullModule,
+    AutohostModule,
   ],
 })
 export class AppModule {}
