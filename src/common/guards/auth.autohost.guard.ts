@@ -21,6 +21,6 @@ export class AutoHostGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean | Promise<boolean> {
     const client = context.switchToWs().getClient<WebSocketClient>();
-    return this.whiteListSet.has(client['socket'].remoteAddress);
+    return this.whiteListSet.has(client._socket.remoteAddress);
   }
 }

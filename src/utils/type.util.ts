@@ -11,6 +11,9 @@ export type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
   username?: string;
+  _socket: {
+    remoteAddress: string;
+  };
 };
 
 export type Obj2String = (data: any) => string | string[];
