@@ -1,4 +1,6 @@
+import { AutohostService } from '@/modules/autohost/autohost.service';
 import { AutoHostMessage } from '@/modules/autohost/dtos/autohost.message.dto';
+import { SubscribeAutohostMessage } from '@/utils/decorators.utils';
 import { LoggerProvider } from '@/utils/logger.util';
 import { WebSocketClient } from '@/utils/type.util';
 import {
@@ -14,8 +16,13 @@ import {
   },
 })
 export class AutoHostGateway extends LoggerProvider {
-  constructor() {
+  constructor(private readonly autohostService: AutohostService) {
     super();
+  }
+  @SubscribeAutohostMessage('autohostRegister')
+  async register(@ConnectedSocket() client: WebSocketClient) {
+    this.logger.debug('Autohost Registering');
+    this.autohostService.register(client);
   }
 
   @SubscribeMessage('workerExists')
@@ -56,5 +63,9 @@ export class AutoHostGateway extends LoggerProvider {
     @ConnectedSocket() client: WebSocketClient,
   ) {
     return null;
+  }
+
+  handleDisconnect(client: WebSocketClient) {
+    this.autohostService.unregister(client);
   }
 }

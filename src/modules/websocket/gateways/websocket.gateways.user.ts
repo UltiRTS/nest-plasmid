@@ -76,6 +76,7 @@ export class UserGateway extends LoggerProvider {
 
   handleConnection(client: WebSocketClient) {
     client.id = uuidV4();
+    client.setMaxListeners(30);
     // client.send(
     //   JSON.stringify({ status: 'success', action: 'AUTHENTICATE_REQUIRED' }),
     // );
@@ -84,7 +85,6 @@ export class UserGateway extends LoggerProvider {
   }
 
   handleDisconnect(client: WebSocketClient) {
-    this.logger.log(`Client disconnected: ${client.id}`);
     this.redisService.remove(`user:${client.userId}`);
     this.redisService.remove(`client:${client.id}`);
     if (this.clientsService.get(client.username)) {

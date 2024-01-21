@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { JoinGameDto } from './dtos/game.join.dto';
 import { GameRoom } from './dtos/game.game-room.dto';
@@ -13,6 +13,7 @@ import { SetTeamDto } from './dtos/game.set-team.dto';
 import { UserState } from '../redis/dtos/redis.user.dto';
 import { SetAiDto } from './dtos/game.set-ai.dto';
 import { SetSepctatorDto } from './dtos/game.set-spectator.dto';
+import { StartGameDto } from './dtos/game.start-game.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -247,6 +248,10 @@ export class GameService {
         releaseFunc();
       }
     }
+  }
+
+  async startGame(dto: StartGameDto, caller: string): Promise<void> {
+    throw new NotImplementedException("startGame isn't implemented yet");
   }
   private async synchornizeGameRoomWithRedis(
     gameRoom: GameRoom,

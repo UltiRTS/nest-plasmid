@@ -58,7 +58,6 @@ export class WebsocketAdapter extends WsAdapter {
     handlers: MessageMappingProperties[],
     process: (data: any) => Observable<any>,
   ): Observable<any> {
-    this.logger.log(`received message: ${buffer.data}`);
     const message = attempt(JSON.parse, buffer.data);
     if (isError(message)) {
       return process({
