@@ -1,4 +1,4 @@
-import Game from '../game/game.entity';
+import { Game } from '../game/game.entity';
 import WebSocket from 'ws';
 export interface AutohostResponse {
   action: string;

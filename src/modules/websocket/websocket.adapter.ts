@@ -20,6 +20,7 @@ import { instanceToPlain } from 'class-transformer';
 import { GameGateway } from './gateways/websocket.gateway.game';
 import { Obj2String } from '@/utils/type.util';
 import { RedisService } from '../redis/redis.service';
+import { event2StatePath } from '@/common/decorators/dump-state.decorater';
 export class WebsocketAdapter extends WsAdapter {
   private redisService: RedisService;
   private gateway: GameGateway;
@@ -75,22 +76,28 @@ export class WebsocketAdapter extends WsAdapter {
     }
 
     const result = messageHandler.callback({ ...message.parameters, seq });
-    let statePath = Reflect.getMetadata(`statePath:${action}`, this.gateway);
-    statePath = statePath ? statePath : '';
+    console.log({ event2StatePath });
+    let statePath = event2StatePath[action];
+    console.log({ action, statePath });
+    statePath = statePath ?? '';
     return process(
       firstValueFrom(
         from(result)
           .pipe(filter((result) => !isNil(result)))
           .pipe(map((result) => instanceToPlain(result)))
           .pipe(
-            map((result) => ({
-              status: 'success',
-              action,
-              path:
-                typeof statePath === 'string' ? statePath : statePath(result),
-              state: result,
-              seq,
-            })),
+            map((result) => {
+              const resp = {
+                status: 'success',
+                action,
+                path:
+                  typeof statePath === 'string' ? statePath : statePath(result),
+                state: result,
+                seq,
+              };
+              // console.log(resp);
+              return resp;
+            }),
           ),
       ).catch(/* ignore error here */ () => undefined),
     );

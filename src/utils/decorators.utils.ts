@@ -3,6 +3,7 @@ import { AutoHostGuard } from '@/common/guards/auth.autohost.guard';
 import { UseFilters, UseGuards, applyDecorators } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { SubscribeMessage } from '@nestjs/websockets';
+
 export function SubscribeAutohostMessage(event: string) {
   return applyDecorators(
     SubscribeMessage(event),

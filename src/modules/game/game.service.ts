@@ -299,7 +299,7 @@ export class GameService {
 
       // setup payload to Autohost
       const engineConf: GameConf = {
-        id: uuidv4(),
+        id: room.id,
         roomId: room.id,
         mgr: this.autohostService.getFreeAutohost(),
         title: room.title,
@@ -324,6 +324,7 @@ export class GameService {
   private createGameConf(room: GameRoom): GameConf {
     const engineConf: GameConf = {
       id: room.id,
+      roomId: room.id,
       mgr: this.autohostService.getFreeAutohost(),
       title: room.title,
       mapId: room.mapId,
