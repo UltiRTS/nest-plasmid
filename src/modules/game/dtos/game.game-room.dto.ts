@@ -8,7 +8,7 @@ export class GameRoom {
   chickens: { [key: string]: { team: string } } = {};
   players: { [key: string]: GameRoomPlayer } = {};
   polls: { [key: string]: string[] } = {};
-  id: string;
+  id: number;
   engineToken = '';
   password = '';
   isStarted = false;
@@ -27,7 +27,7 @@ interface GameRoomConstructorParams {
   title: string;
   hoster: string;
   mapId: number;
-  id: string;
+  id: number;
   password: string;
   autohost: string;
 }

@@ -8,12 +8,16 @@ import {
   GameRoomException,
   JoinGameExcption,
 } from '@/common/exceptions/game.exception';
-
+import { v4 as uuidv4 } from 'uuid';
 import { SetTeamDto } from './dtos/game.set-team.dto';
 import { UserState } from '../redis/dtos/redis.user.dto';
 import { SetAiDto } from './dtos/game.set-ai.dto';
 import { SetSepctatorDto } from './dtos/game.set-spectator.dto';
 import { StartGameDto } from './dtos/game.start-game.dto';
+import { BroadcastException } from '@/common/exceptions/base.exception';
+import { GameConf } from './game.type';
+import { AutohostService } from '../autohost/autohost.service';
+import { concat, uniqBy } from 'lodash';
 
 type AcquireLockParams = {
   source: string;
@@ -23,7 +27,11 @@ type AcquireLockParams = {
 
 @Injectable()
 export class GameService {
-  constructor(private readonly redisService: RedisService) {}
+  private roomIdCounter = 0;
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly autohostService: AutohostService,
+  ) {}
 
   /**
    * Join a game room if it exists, otherwise create a new one.
@@ -55,6 +63,7 @@ export class GameService {
           title: gameName,
           hoster: caller,
           mapId: parseInt(mapId),
+          id: this.roomIdCounter++,
         });
       } else {
         room.players[caller] = {
@@ -250,9 +259,130 @@ export class GameService {
     }
   }
 
-  async startGame(dto: StartGameDto, caller: string): Promise<void> {
-    throw new NotImplementedException("startGame isn't implemented yet");
+  async startGame(dto: StartGameDto, caller: string): Promise<GameRoom> {
+    const { gameName } = dto;
+    let releaseFunc = undefined;
+    try {
+      const { room, release } = await this.acquireLock({
+        source: 'START_GAME',
+        room: gameName,
+      });
+      releaseFunc = release;
+      if (!room) {
+        throw new GameRoomException(
+          'STARTGAME',
+          'Game room does not exist, cannot start.',
+        );
+      }
+      if (room.hoster !== caller) {
+        throw new GameRoomException(
+          'STARTGAME',
+          'Only the hoster can start the game.',
+        );
+      }
+      if (room.isStarted) {
+        throw new GameRoomException(
+          'STARTGAME',
+          'Game has already started, cannot start again.',
+        );
+      }
+
+      for (const player of Object.values(room.players)) {
+        if (!player.hasmap) {
+          throw new BroadcastException(
+            'STARTGAME',
+            'Some players have not set their map, cannot start.',
+            Object.keys(room.players),
+          );
+        }
+      }
+
+      // setup payload to Autohost
+      const engineConf: GameConf = {
+        id: uuidv4(),
+        roomId: room.id,
+        mgr: this.autohostService.getFreeAutohost(),
+        title: room.title,
+        mapId: room.mapId,
+        aiHosters: [],
+        team: {},
+      };
+
+      this.autohostService.startGame(engineConf);
+
+      room.isStarted = true;
+
+      this.synchornizeGameRoomWithRedis(room);
+      return room;
+    } finally {
+      if (releaseFunc) {
+        releaseFunc();
+      }
+    }
   }
+
+  private createGameConf(room: GameRoom): GameConf {
+    const engineConf: GameConf = {
+      id: room.id,
+      mgr: this.autohostService.getFreeAutohost(),
+      title: room.title,
+      mapId: room.mapId,
+      aiHosters: [],
+      team: {},
+    };
+    // teamMapping tracks each Team to a number as id
+
+    const keyPairs = uniqBy(
+      concat(
+        Object.values(room.players),
+        Object.values(room.ais),
+        Object.values(room.chickens),
+      ),
+      'team',
+    ).map((player, i) => [player.team, i]);
+    const teamMapping = Object.fromEntries(keyPairs);
+    let index = 0;
+    for (const [name, player] of Object.entries(room.players)) {
+      const team = player.isSepctator ? 0 : teamMapping[player.team];
+      engineConf.team[name] = {
+        index,
+        isAI: false,
+        isChicken: false,
+        isSpectator: player.isSepctator,
+        team,
+      };
+      if (name in room.aiHosters) {
+        engineConf.aiHosters.push(index);
+      }
+      index++;
+    }
+
+    for (const [name, ai] of Object.entries(room.ais)) {
+      const id = `${name}${index}`;
+      engineConf.team[id] = {
+        index,
+        isAI: true,
+        isChicken: false,
+        isSpectator: false,
+        team: teamMapping[ai.team],
+      };
+      index++;
+    }
+
+    for (const [name, chicken] of Object.entries(room.chickens)) {
+      const id = `${name}${index}`;
+      engineConf.team[id] = {
+        index,
+        isAI: false,
+        isChicken: true,
+        isSpectator: false,
+        team: teamMapping[chicken.team],
+      };
+      index++;
+    }
+    return engineConf;
+  }
+
   private async synchornizeGameRoomWithRedis(
     gameRoom: GameRoom,
   ): Promise<void> {
