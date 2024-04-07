@@ -50,7 +50,7 @@ export interface CacheConfig {
 const defaultConfig: Config = {
   app: {
     port: 8081,
-    logLevel: LogLevel.log,
+    logLevel: LogLevel.debug,
     workerCount: os.cpus().length,
   },
   dataSource: {

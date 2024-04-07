@@ -26,6 +26,8 @@ import { SetAiDto } from '../../game/dtos/game.set-ai.dto';
 import { ClientsService } from '../../clients/clients.service';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { StartGameDto } from '@/modules/game/dtos/game.start-game.dto';
+import { HasMapDto } from '@/modules/game/dtos/game.has-map.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -59,7 +61,7 @@ export class GameGateway extends LoggerProvider {
     @MessageBody() joinGameDto: JoinGameDto,
     @ConnectedSocket() client: WebSocketClient,
   ): Promise<GameRoom> {
-    this.logger.debug('join game: ', { data: joinGameDto, client });
+    // this.logger.debug('join game: ', { data: joinGameDto, client });
     const username = client.username;
     const room = await this.gameService.joinGame(joinGameDto, username);
     const message: Response<GameRoomPlayer> = {
@@ -134,6 +136,33 @@ export class GameGateway extends LoggerProvider {
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
+  @SubscribeMessage('HASMAP')
+  async hasMap(
+    @MessageBody() data: HasMapDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom['players']> {
+    const username = client.username;
+    const room = await this.gameService.hasMap(data, username);
+    const message: Response<GameRoom['players']> = {
+      status: 'success',
+      action: 'HASMAP',
+      path: `user.game.players.${client.username}`,
+      state: room.players,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room.players;
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
   @SubscribeMessage('SETAI')
   async setAi(
     @MessageBody() data: SetAiDto,
@@ -141,6 +170,7 @@ export class GameGateway extends LoggerProvider {
   ): Promise<GameRoom> {
     const username = client.username;
     const room = await this.gameService.setAi(data, username);
+    this.logger.debug(JSON.stringify(room))
     const message: Response<GameRoom> = {
       status: 'success',
       action: 'SETAI',
@@ -163,5 +193,33 @@ export class GameGateway extends LoggerProvider {
   }
   private broadcastMessage<T>(message: Response<T>, recipeints: string[]) {
     this.clientsService.broadcast(recipeints, message);
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('STARTGAME')
+  async startGame(
+    @MessageBody() data: StartGameDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.startGame(data, username)
+    this.logger.debug(JSON.stringify(room))
+    const message: Response<GameRoom> = {
+      status: 'success',
+      action: 'STARTGAME',
+      path: `user.game`,
+      state: room,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room;
   }
 }

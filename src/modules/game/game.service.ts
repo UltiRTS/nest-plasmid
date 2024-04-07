@@ -18,6 +18,7 @@ import { BroadcastException } from '@/common/exceptions/base.exception';
 import { GameConf } from './game.type';
 import { AutohostService } from '../autohost/autohost.service';
 import { concat, uniqBy } from 'lodash';
+import { LoggerProvider } from '@/utils/logger.util';
 
 type AcquireLockParams = {
   source: string;
@@ -26,12 +27,14 @@ type AcquireLockParams = {
 };
 
 @Injectable()
-export class GameService {
+export class GameService extends LoggerProvider {
   private roomIdCounter = 0;
   constructor(
     private readonly redisService: RedisService,
     private readonly autohostService: AutohostService,
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * Join a game room if it exists, otherwise create a new one.
@@ -65,13 +68,15 @@ export class GameService {
           mapId: parseInt(mapId),
           id: this.roomIdCounter++,
         });
-      } else {
-        room.players[caller] = {
-          isSepctator: false,
-          team: 'A',
-          hasmap: false,
-        };
+
       }
+      room.players[caller] = {
+        isSpec: false,
+        team: 'A',
+        hasmap: false,
+      };
+
+      await this.redisService.set<GameRoom>(`gameRoom:${gameName}`, room)
       return room;
     } finally {
       await this.redisService.unlock(`lock:gameRoom:${gameName}`);
@@ -126,6 +131,34 @@ export class GameService {
     }
   }
 
+  async hasMap(dto: SetMapDto, caller: string): Promise<GameRoom> {
+    const { gameName, mapId } = dto;
+
+    let releaseLock: () => void | undefined = undefined;
+    try {
+      const { room, release } = await this.acquireLock({
+        source: 'HAS_MAP',
+        room: gameName,
+      });
+      releaseLock = release;
+
+      if (mapId != room.mapId ) {
+        throw new GameRoomException('HAS_MAP', 'Room map is not the same with the map you just downloaded')
+      }
+
+      room.players[caller].hasmap = true;
+
+      await this.synchornizeGameRoomWithRedis(room);
+      await this.redisService.set(`gameRoom:${gameName}`, room);
+      return room;
+    } finally {
+      if (releaseLock) {
+        releaseLock();
+      }
+    }
+  }
+  
+
   async setMap(dto: SetMapDto, caller: string): Promise<GameRoom> {
     const { gameName, mapId } = dto;
 
@@ -147,7 +180,7 @@ export class GameService {
         );
       }
 
-      room.mapId = parseInt(mapId);
+      room.mapId = mapId;
       await this.synchornizeGameRoomWithRedis(room);
       await this.redisService.set(`gameRoom:${gameName}`, room);
       return room;
@@ -199,6 +232,7 @@ export class GameService {
       });
       releaseFunc = release;
 
+
       if (room.hoster !== caller) {
         throw new GameRoomException('SET_AI', 'Only the hoster can set ai.');
       }
@@ -208,11 +242,15 @@ export class GameService {
           'Game has already started, cannot set ai.',
         );
       }
-      if (type === 'ai') {
+      if (type === 'AI') {
+        this.logger.debug("setting ai")
         room.ais[ai] = { team };
-      } else if (type === 'chicken') {
+      } else if (type === 'Chicken') {
         room.chickens[ai] = { team };
       }
+
+      this.logger.debug(JSON.stringify(room))
+      await this.redisService.set(`gameRoom:${gameName}`, room);
 
       this.synchornizeGameRoomWithRedis(room);
       return room;
@@ -248,7 +286,7 @@ export class GameService {
         );
       }
 
-      room.players[player].isSepctator = true;
+      room.players[player].isSpec = true;
 
       this.synchornizeGameRoomWithRedis(room);
       return room;
@@ -308,6 +346,8 @@ export class GameService {
         team: {},
       };
 
+      this.logger.debug(JSON.stringify(engineConf))
+
       this.autohostService.startGame(engineConf);
 
       room.isStarted = true;
@@ -344,12 +384,12 @@ export class GameService {
     const teamMapping = Object.fromEntries(keyPairs);
     let index = 0;
     for (const [name, player] of Object.entries(room.players)) {
-      const team = player.isSepctator ? 0 : teamMapping[player.team];
+      const team = player.isSpec ? 0 : teamMapping[player.team];
       engineConf.team[name] = {
         index,
         isAI: false,
         isChicken: false,
-        isSpectator: player.isSepctator,
+        isSpectator: player.isSpec,
         team,
       };
       if (name in room.aiHosters) {
@@ -456,6 +496,7 @@ export class GameService {
       const room = await this.redisService.get<GameRoom>(
         `gameRoom:${param.room}`,
       );
+      this.logger.debug(`fetched room: ${room}`)
       if (!room) {
         throw new GameRoomException(param.source, 'Room not found');
       }

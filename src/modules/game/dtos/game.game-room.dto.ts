@@ -33,7 +33,7 @@ interface GameRoomConstructorParams {
 }
 
 export interface GameRoomPlayer {
-  isSepctator: boolean;
+  isSpec: boolean;
   team: string;
   hasmap: boolean;
 }
