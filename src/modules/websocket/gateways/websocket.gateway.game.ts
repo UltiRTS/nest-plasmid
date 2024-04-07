@@ -132,7 +132,7 @@ export class GameGateway extends LoggerProvider {
     return room.mapId;
   }
 
-  @StatePath('user.game')
+  @StatePath('user.game.players')
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
   @UsePipes(new ValidationPipe())
@@ -143,10 +143,11 @@ export class GameGateway extends LoggerProvider {
   ): Promise<GameRoom['players']> {
     const username = client.username;
     const room = await this.gameService.hasMap(data, username);
+    this.logger.debug("room", room)
     const message: Response<GameRoom['players']> = {
       status: 'success',
       action: 'HASMAP',
-      path: `user.game.players.${client.username}`,
+      path: `user.game.players`,
       state: room.players,
       seq: -1,
     };
