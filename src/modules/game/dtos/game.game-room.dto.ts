@@ -18,7 +18,7 @@ export class GameRoom {
   mod = '';
   constructor(data: Partial<GameRoomConstructorParams>) {
     Object.assign(this, data);
-    this.engineToken = uniqueId();
+    // this.engineToken = uniqueId();
     this.players = {};
   }
 }

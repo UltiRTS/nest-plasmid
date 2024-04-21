@@ -387,8 +387,11 @@ export class GameService extends LoggerProvider {
 
       this.logger.debug(JSON.stringify(engineConf))
 
-      let [hosterIP, cli] = this.autohostService.startGame(engineConf);
-      room.hoster = hosterIP;
+      let [autohostIP, cli] = this.autohostService.startGame(engineConf);
+      if(autohostIP == '::ffff:127.0.0.1') {
+        autohostIP = '127.0.0.1'
+      } 
+      room.responsibleAutohost = autohostIP;
       let res: boolean = await new Promise((resolve, reject) => {
         cli.ws.on('message', (data, _) => {
           let msg: {
