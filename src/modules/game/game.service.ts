@@ -19,6 +19,7 @@ import { GameConf } from './game.type';
 import { AutohostService } from '../autohost/autohost.service';
 import { concat, uniqBy } from 'lodash';
 import { LoggerProvider } from '@/utils/logger.util';
+import { EventEmitter } from 'stream';
 
 type AcquireLockParams = {
   source: string;
@@ -365,27 +366,26 @@ export class GameService extends LoggerProvider {
       this.logger.debug(JSON.stringify(engineConf))
 
       let [hosterIP, cli] = this.autohostService.startGame(engineConf);
-      let parent = this;
-      return new Promise((resolve, reject) => {
-        cli.ws.on('message', (data, isBin) => {
+      room.hoster = hosterIP;
+      let res: boolean = await new Promise((resolve, reject) => {
+        cli.ws.on('message', (data, _) => {
           let msg: {
             action: string
             parameters: {[key:string]: any}
           } = JSON.parse(data.toString())
           if(msg.action === 'serverStarted') {
             room.isStarted = true;
-            room.hoster = hosterIP;
             room.autohostPort = parseInt(msg.parameters['port'])
             this.logger.debug(`updated room: ${JSON.stringify(room)}`)
-            parent.synchornizeGameRoomWithRedis(room);
-            resolve(room);
+
+            resolve(true);
           } else {
             // TODO: handle other, add a time out as well
           }
-
-          this.logger.debug(`receicing message from autohost ${hosterIP}: ${data}`)
-        });
+        })
       })
+      this.logger.debug('synncrhonizing redis')
+      await this.synchornizeGameRoomWithRedis(room);
 
       return room;
     } finally {
