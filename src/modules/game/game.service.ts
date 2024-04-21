@@ -20,6 +20,7 @@ import { AutohostService } from '../autohost/autohost.service';
 import { concat, uniqBy } from 'lodash';
 import { LoggerProvider } from '@/utils/logger.util';
 import { EventEmitter } from 'stream';
+import { RoomJoinDto } from '../chat/dtos/room.join.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -347,20 +348,41 @@ export class GameService extends LoggerProvider {
         team: {},
       };
 
-      engineConf.team[room.hoster] = {
-        index: 0,
-        isAI: false,
-        isChicken: false,
-        isSpectator: false,
-        team: 0
+      let index = 0;
+      let teams = []
+      for(const pname in room.players) {
+          teams.push(room.players[pname].team) 
+      }
+      for (const pname in room.ais) {
+        teams.push(room.ais[pname].team)
       }
 
-      engineConf.team['GPT'] = {
-        index: 1,
-        isAI: true,
-        isChicken: false,
-        isSpectator: false,
-        team: 1
+      teams = teams.filter((x, i) => i === teams.indexOf(x))
+      let teamsMapping = {}
+      for(let i=0; i<teams.length; i++) {
+        teamsMapping[teams[i]] = i;
+      }
+      
+      for(const pname in room.players) {
+        let player = room.players[pname]
+        engineConf.team[pname] = {
+          index: index,
+          isAI: false,
+          isChicken: false,
+          isSpectator: player.isSpec, 
+          team: teamsMapping[player.team]
+        }
+      }
+
+      for(const pname in room.ais) {
+        let player = room.ais[pname]
+        engineConf.team[pname] = {
+          index: index,
+          isAI: true,
+          isChicken: false,
+          isSpectator: false, 
+          team: teamsMapping[player.team]
+        }
       }
 
       this.logger.debug(JSON.stringify(engineConf))
