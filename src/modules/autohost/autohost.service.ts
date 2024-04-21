@@ -45,7 +45,7 @@ export class AutohostService extends LoggerProvider {
     return availableIps[this.loadBalancerCounter++ % availableIps.length];
   }
 
-  startGame(conf: GameConf) {
+  startGame(conf: GameConf): [string, AutohostClient] {
     if (conf.mgr == null) {
       conf.mgr = this.getFreeAutohost();
     }
@@ -72,21 +72,23 @@ export class AutohostService extends LoggerProvider {
         };
       }
     }
-    this.hostGamesById[conf.title].game.game_config = JSON.stringify(conf);
-    this.hostGamesById[conf.title].game.team_win = -1;
+    this.hostGamesById[conf.id].game.game_config = JSON.stringify(conf);
+    this.hostGamesById[conf.id].game.team_win = -1;
     if (conf.mgr in this.autohosts) {
       this.hostGamesById[conf.id].ws = this.autohosts[conf.mgr].ws;
       this.autohosts[conf.mgr].ws.send(
         JSON.stringify({
-          action: 'start',
+          action: 'startGame',
           parameters: conf,
         }),
       );
+
+      return [conf.mgr, this.autohosts[conf.mgr]];
     } else {
       this.hostGamesById[conf.id].error = 'Autohost not found';
       this.logger.error('Autohost not found');
     }
 
-    return;
+    return null;
   }
 }

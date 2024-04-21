@@ -342,17 +342,51 @@ export class GameService extends LoggerProvider {
         mgr: this.autohostService.getFreeAutohost(),
         title: room.title,
         mapId: room.mapId,
-        aiHosters: [],
+        aiHosters: [0],
         team: {},
       };
 
+      engineConf.team[room.hoster] = {
+        index: 0,
+        isAI: false,
+        isChicken: false,
+        isSpectator: false,
+        team: 0
+      }
+
+      engineConf.team['GPT'] = {
+        index: 1,
+        isAI: true,
+        isChicken: false,
+        isSpectator: false,
+        team: 1
+      }
+
       this.logger.debug(JSON.stringify(engineConf))
 
-      this.autohostService.startGame(engineConf);
+      let [hosterIP, cli] = this.autohostService.startGame(engineConf);
+      let parent = this;
+      return new Promise((resolve, reject) => {
+        cli.ws.on('message', (data, isBin) => {
+          let msg: {
+            action: string
+            parameters: {[key:string]: any}
+          } = JSON.parse(data.toString())
+          if(msg.action === 'serverStarted') {
+            room.isStarted = true;
+            room.hoster = hosterIP;
+            room.autohostPort = parseInt(msg.parameters['port'])
+            this.logger.debug(`updated room: ${JSON.stringify(room)}`)
+            parent.synchornizeGameRoomWithRedis(room);
+            resolve(room);
+          } else {
+            // TODO: handle other, add a time out as well
+          }
 
-      room.isStarted = true;
+          this.logger.debug(`receicing message from autohost ${hosterIP}: ${data}`)
+        });
+      })
 
-      this.synchornizeGameRoomWithRedis(room);
       return room;
     } finally {
       if (releaseFunc) {
