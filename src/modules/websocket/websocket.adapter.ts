@@ -95,7 +95,7 @@ export class WebsocketAdapter extends WsAdapter {
                 state: result,
                 seq,
               };
-              // console.log(resp);
+              console.log(resp);
               return resp;
             }),
           ),

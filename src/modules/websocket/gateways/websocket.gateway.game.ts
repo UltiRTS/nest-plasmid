@@ -31,6 +31,7 @@ import { HasMapDto } from '@/modules/game/dtos/game.has-map.dto';
 import { LeaveGameDto } from '@/modules/game/dtos/game.leave-game.dto';
 import { flatMap } from 'lodash';
 import { UserState } from '@/modules/redis/dtos/redis.user.dto';
+import { MidJoinDto } from '@/modules/game/dtos/game.mid-join.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -226,6 +227,7 @@ export class GameGateway extends LoggerProvider {
     );
     return room;
   }
+
   @StatePath('user')
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())
@@ -252,5 +254,19 @@ export class GameGateway extends LoggerProvider {
     );
     this.logger.debug("leaved game")
     return user;
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('MIDJOIN')
+  async midJoin(
+    @MessageBody() data: MidJoinDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.midJoin(data, username)
+    return room;
   }
 }

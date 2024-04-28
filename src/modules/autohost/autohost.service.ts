@@ -6,6 +6,7 @@ import { GameConf } from '../game/game.type';
 import { createHash } from 'crypto';
 import { HostedGame } from './autohost.types';
 import { Game } from '../game/game.entity';
+import { AutoHostMessage } from './dtos/autohost.message.dto';
 
 interface AutohostClient {
   ws: WebSocketClient;
@@ -43,6 +44,15 @@ export class AutohostService extends LoggerProvider {
   getFreeAutohost(): string {
     const availableIps = Object.keys(this.autohosts);
     return availableIps[this.loadBalancerCounter++ % availableIps.length];
+  }
+
+  midjoin(msg: AutoHostMessage): [string, AutohostClient, boolean] {
+    let gameID = msg.parameters['id']
+    
+    let autohost = this.hostGamesById[gameID]
+    autohost.ws.send(JSON.stringify(msg))
+
+    return [autohost.autohost, this.autohosts[autohost.autohost], true]
   }
 
   startGame(conf: GameConf): [string, AutohostClient] {

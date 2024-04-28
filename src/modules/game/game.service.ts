@@ -22,6 +22,9 @@ import { LoggerProvider } from '@/utils/logger.util';
 import { EventEmitter } from 'stream';
 import { RoomJoinDto } from '../chat/dtos/room.join.dto';
 import { LeaveGameDto } from './dtos/game.leave-game.dto';
+import { MidJoinDto } from './dtos/game.mid-join.dto';
+import { tokenType } from 'yaml/dist/parse/cst';
+import { join } from 'path';
 
 type AcquireLockParams = {
   source: string;
@@ -361,7 +364,7 @@ export class GameService extends LoggerProvider {
       if (room.isStarted) {
         throw new GameRoomException(
           'STARTGAME',
-          'Game has already started, cannot start again.',
+          'Game already started',
         );
       }
 
@@ -431,6 +434,9 @@ export class GameService extends LoggerProvider {
       } 
       room.responsibleAutohost = autohostIP;
       let res: boolean = await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new GameRoomException('STARTGAME', 'timeout listening response from autohost'))
+        }, 5000)
         cli.ws.on('message', (data, _) => {
           let msg: {
             action: string
@@ -448,6 +454,10 @@ export class GameService extends LoggerProvider {
         })
       })
       this.logger.debug('synncrhonizing redis')
+      if(res) {
+        this.logger.debug('marking room isStarted')
+        room.isStarted = true;
+      }
       await this.synchornizeGameRoomWithRedis(room);
 
       return room;
@@ -457,6 +467,65 @@ export class GameService extends LoggerProvider {
       }
     }
   }
+
+  async midJoin(dto: MidJoinDto, caller: string): Promise<GameRoom> {
+    let releaseFunc = undefined;
+    const {gameName} = dto;
+    try {
+      const {room, release} = await this.acquireLock({
+        source: 'MIDJOIN',
+        room: gameName
+      });
+      releaseFunc = release
+
+      if(!Object.keys(room.players).includes(caller)) {
+        throw new GameRoomException('LEAVEGAME', 'not a player in this game room');
+      }
+
+      const [_, cli, success] = this.autohostService.midjoin({
+        action: 'midJoin',
+        parameters: {
+          id: room.id,
+          title: room.title,
+          team: room.players[caller].team,
+          token: room.engineToken,
+          isSpec: room.players[caller].isSpec,
+          playerName: caller,
+        }
+      })
+
+      this.logger.debug(`success(${success})`)
+      if(success) {
+        const joined: boolean = await new Promise((resolve, reject) => {
+          setTimeout(() => {
+            reject(new GameRoomException('MIDJOIN', 'timeout waiting autohost response'))
+          }, 5000)
+          cli.ws.on('message', (data, _) => {
+            let msg: {
+              action: string,
+              parameters: {[key: string]: any}
+            } = JSON.parse(data.toString())
+
+            if(msg.action == 'midJoined') {
+              resolve(true)
+            } else if(msg.action == 'joinRejected') {
+              resolve(false)
+            }
+
+            resolve(false)
+          })
+        })
+
+        if(joined) {
+          return room;
+        } else {
+          throw new GameRoomException('MIDJOIN', 'Could not mid join')
+        }
+      }
+    } finally {
+      if(releaseFunc) releaseFunc()
+    }
+  } 
 
   private createGameConf(room: GameRoom): GameConf {
     const engineConf: GameConf = {
