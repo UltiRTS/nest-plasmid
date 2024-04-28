@@ -21,6 +21,7 @@ import { concat, uniqBy } from 'lodash';
 import { LoggerProvider } from '@/utils/logger.util';
 import { EventEmitter } from 'stream';
 import { RoomJoinDto } from '../chat/dtos/room.join.dto';
+import { LeaveGameDto } from './dtos/game.leave-game.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -299,6 +300,43 @@ export class GameService extends LoggerProvider {
     }
   }
 
+  async leaveGame(dto: LeaveGameDto, caller: string): Promise<{
+    user: UserState,
+    room: GameRoom
+  }> {
+    const {gameName} = dto;
+    let releaseFunc = undefined;
+    try {
+      const {player, room, release} = await this.acquireLock({
+        source: 'LEAVE_GAME',
+        room: gameName,
+        player: caller
+      })
+      releaseFunc = release;
+
+      if(!Object.keys(room.players).includes(caller)) {
+        throw new GameRoomException(
+          'LEAVE_GAME',
+          'Player not is not in the game room.'
+        )
+      }
+
+      delete room.players[caller];
+      player.game = null;
+
+      await this.redisService.set<UserState>(`userState:${caller}`, player)
+      await this.synchornizeGameRoomWithRedis(room);
+      return {
+        room,
+        user: player
+      };
+    } finally {
+      if(releaseFunc) {
+        releaseFunc()
+      }
+    }
+  }
+
   async startGame(dto: StartGameDto, caller: string): Promise<GameRoom> {
     const { gameName } = dto;
     let releaseFunc = undefined;
@@ -486,6 +524,12 @@ export class GameService extends LoggerProvider {
   private async synchornizeGameRoomWithRedis(
     gameRoom: GameRoom,
   ): Promise<void> {
+    // release inactive game room, assumed lock of gameroom is acquired before this
+    if (Object.keys(gameRoom.players).length == 0) {
+      this.redisService.remove(`gameRoom:${gameRoom}`)
+      return;
+    }
+
     const lockGuards = await Promise.all(
       Object.keys(gameRoom.players).map((player) =>
         this.acquireLock({
@@ -525,6 +569,7 @@ export class GameService extends LoggerProvider {
       release: () => {},
     };
     if (param.player) {
+      this.logger.debug(`locking lock:user:${param.player} source: ${param.source}`)
       const playerLock = await this.redisService.lock(
         `lock:user:${param.player}`,
       );
@@ -543,6 +588,7 @@ export class GameService extends LoggerProvider {
       res.player = player;
     }
     if (param.room) {
+      this.logger.debug(`locking lock:gameRoom:${param.room} source: ${param.source}`)
       const roomLock = await this.redisService.lock(
         `lock:gameRoom:${param.room}`,
       );
@@ -564,9 +610,11 @@ export class GameService extends LoggerProvider {
 
     res.release = async () => {
       if (param.player) {
+        this.logger.debug(`unlocking lock:user:${param.player} source: ${param.source}`)
         await this.redisService.unlock(`lock:user:${param.player}`);
       }
       if (param.room) {
+        this.logger.debug(`unlocking lock:gameRoom:${param.room} source: ${param.source}`)
         await this.redisService.unlock(`lock:gameRoom:${param.room}`);
       }
     };
