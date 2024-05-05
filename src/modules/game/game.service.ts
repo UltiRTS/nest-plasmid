@@ -437,7 +437,7 @@ export class GameService extends LoggerProvider {
       let res: boolean = await new Promise((resolve, reject) => {
         setTimeout(() => {
           reject(new GameRoomException('STARTGAME', 'timeout listening response from autohost'))
-        }, 5000)
+        }, 30000)
         cli.ws.on('message', (data, _) => {
           let msg: {
             action: string

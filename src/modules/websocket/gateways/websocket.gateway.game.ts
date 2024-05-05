@@ -32,6 +32,7 @@ import { LeaveGameDto } from '@/modules/game/dtos/game.leave-game.dto';
 import { flatMap } from 'lodash';
 import { UserState } from '@/modules/redis/dtos/redis.user.dto';
 import { MidJoinDto } from '@/modules/game/dtos/game.mid-join.dto';
+import { SetModDto } from '@/modules/game/dtos/game.set-mod.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -269,4 +270,33 @@ export class GameGateway extends LoggerProvider {
     const room = await this.gameService.midJoin(data, username)
     return room;
   }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('SETMOD')
+  async setMod(
+    @MessageBody() data: SetModDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.setMod(data, username)
+    const message: Response<GameRoom> = {
+      status: 'success',
+      action: 'SETMOD',
+      path: `user.game`,
+      state: room,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    this.logger.debug("broadcasting setmod")
+    return room;
+  }
+
 }
