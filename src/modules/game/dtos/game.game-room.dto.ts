@@ -15,7 +15,7 @@ export class GameRoom {
   responsibleAutohost = '';
   autohostPort = 0;
   aiHosters: string[] = [];
-  mod = '';
+  mod = 'mod.sdd';
   constructor(data: Partial<GameRoomConstructorParams>) {
     Object.assign(this, data);
     // this.engineToken = uniqueId();

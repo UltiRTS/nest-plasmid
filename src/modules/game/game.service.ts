@@ -387,6 +387,7 @@ export class GameService extends LoggerProvider {
         mapId: room.mapId,
         aiHosters: [0],
         team: {},
+        mod: room.mod
       };
 
       let index = 0;
@@ -536,6 +537,7 @@ export class GameService extends LoggerProvider {
       mapId: room.mapId,
       aiHosters: [],
       team: {},
+      mod: 'mod.sdd'
     };
     // teamMapping tracks each Team to a number as id
 

@@ -5,6 +5,7 @@ export interface GameConf {
   mgr: string;
   aiHosters: number[];
   mapId: number;
+  mod: string;
   team: {
     [key: string]: {
       index: number;
