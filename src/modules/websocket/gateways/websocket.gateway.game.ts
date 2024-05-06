@@ -33,6 +33,8 @@ import { flatMap } from 'lodash';
 import { UserState } from '@/modules/redis/dtos/redis.user.dto';
 import { MidJoinDto } from '@/modules/game/dtos/game.mid-join.dto';
 import { SetModDto } from '@/modules/game/dtos/game.set-mod.dto';
+import { GameBrief } from '@/utils/statedict';
+import { RedisService } from '@/modules/redis/redis.service';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -50,6 +52,7 @@ export class GameGateway extends LoggerProvider {
   constructor(
     private readonly gameService: GameService,
     private readonly clientsService: ClientsService,
+    private readonly redisService: RedisService,
   ) {
     super();
   }
@@ -82,6 +85,19 @@ export class GameGateway extends LoggerProvider {
         (username) => username !== client.username,
       ),
     );
+
+    const gameRoomUpdateMessage: Response<GameBrief[]> = {
+      status: 'success',
+      action: 'JOINGAME',
+      path: 'games',
+      state: await this.redisService.getAllGameRooms(),
+      seq: -1,
+    } 
+    // update game rooms for everyone
+    const onlinePlayers = await this.redisService.getAllOnlineUsers()
+    this.logger.debug(`online players: ${JSON.stringify(onlinePlayers)}`)
+    this.logger.debug(`all rooms: ${JSON.stringify(gameRoomUpdateMessage.state)}`)
+    this.broadcastMessage(gameRoomUpdateMessage, onlinePlayers)
     return room;
   }
 

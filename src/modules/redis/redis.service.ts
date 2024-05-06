@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, Inject } from '@nestjs/common';
 import { REDIS_CLIENT, RedisClient } from './redis.factory';
-import { State, UserDump } from '@/utils/statedict';
+import { GameBrief, State, UserDump } from '@/utils/statedict';
 import { UserState } from './dtos/redis.user.dto';
 import { ChatRoom } from '../chat/chat.entity';
 import { ChatRoomState } from '@/utils/statedict';
@@ -170,6 +170,25 @@ export class RedisService implements OnModuleDestroy {
       chats: rooms,
       games,
     };
+  }
+
+  public async getAllOnlineUsers(): Promise<string[]> {
+    return (await this.redis.keys('userState:*')).map(k => k.split(':')[1])
+  }
+
+  public async getAllGameRooms(): Promise<GameBrief[]> {
+    const gameRoomIds = await this.redis.keys('gameRoom:*');
+    const games = await Promise.all(
+      gameRoomIds.map((id) => this.get<GameRoom>(id)),
+    ).then((rooms) =>
+      rooms.map((r) => ({
+        title: r.title,
+        hoster: r.hoster,
+        mapId: r.mapId,
+      })),
+    );
+
+    return games;
   }
 
   public async unlock(key: string): Promise<void> {
