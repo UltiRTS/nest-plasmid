@@ -229,6 +229,34 @@ export class GameGateway extends LoggerProvider {
     return room;
   }
 
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('KILLENGINE')
+  async killEngine(
+    @MessageBody() data: StartGameDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.killEngine(data, username)
+    this.logger.debug(JSON.stringify(room))
+    const message: Response<GameRoom> = {
+      status: 'success',
+      action: 'STARTGAME',
+      path: `user.game`,
+      state: room,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room;
+  }
+
   @StatePath('user')
   @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
   @UseGuards(new AuthGuard())

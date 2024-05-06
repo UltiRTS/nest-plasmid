@@ -101,4 +101,13 @@ export class AutohostService extends LoggerProvider {
 
     return null;
   }
+
+  killGame(msg: AutoHostMessage): [string, AutohostClient] {
+    let gameID = msg.parameters['id']
+    
+    let autohost = this.hostGamesById[gameID]
+    autohost.ws.send(JSON.stringify(msg))
+
+    return [autohost.autohost, this.autohosts[autohost.autohost]]
+  }
 }

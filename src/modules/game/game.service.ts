@@ -25,6 +25,9 @@ import { LeaveGameDto } from './dtos/game.leave-game.dto';
 import { MidJoinDto } from './dtos/game.mid-join.dto';
 import { tokenType } from 'yaml/dist/parse/cst';
 import { join } from 'path';
+import { KillEngineDto } from './dtos/game.kill-engine.dto';
+import { release } from 'os';
+import { AutoHostMessage } from '../autohost/dtos/autohost.message.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -468,6 +471,62 @@ export class GameService extends LoggerProvider {
       if (releaseFunc) {
         releaseFunc();
       }
+    }
+  }
+
+  async killEngine(dto: KillEngineDto, caller: string): Promise<GameRoom> {
+    let releaseFunc = undefined;
+    const {gameName} = dto;
+    try {
+      const { room, release } = await this.acquireLock({
+        source: 'KILLENGINE',
+        room: gameName,
+      });
+      releaseFunc = release;
+      if (!room) {
+        throw new GameRoomException(
+          'KILLENGINE',
+          'Game room does not exist, cannot start.',
+        );
+      }
+      if (room.hoster !== caller) {
+        throw new GameRoomException(
+          'KILLENGINE',
+          'Only the hoster can start the game.',
+        );
+      }
+
+      const killEngineMsg: AutoHostMessage = {
+        action: 'killEngine',
+        parameters: {
+          id: room.id,
+          title: room.title
+        }
+      }
+      const [_, cli] = this.autohostService.killGame(killEngineMsg);
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new GameRoomException('KILLENGINE', 'timeout listening response from autohost'))
+        }, 5000)
+        cli.ws.on('message', (data, _) => {
+          let msg: {
+            action: string
+            parameters: {[key:string]: any}
+          } = JSON.parse(data.toString())
+          if(msg.action === 'killEngineRejected') {
+            reject(new GameRoomException('KILLENGINE', 'kill engine command rejected'))
+          } else if(msg.action === 'killEngineSignalSent'){
+            room.isStarted = false;
+            resolve(true);
+          }
+        })
+      })
+
+      await this.synchornizeGameRoomWithRedis(room);
+
+      return room;
+    } finally {
+      if(releaseFunc) releaseFunc()
     }
   }
 
