@@ -414,6 +414,7 @@ export class GameService extends LoggerProvider {
           isSpectator: player.isSpec, 
           team: teamsMapping[player.team]
         }
+        index++;
       }
 
       for(const pname in room.ais) {
@@ -425,12 +426,13 @@ export class GameService extends LoggerProvider {
           isSpectator: false, 
           team: teamsMapping[player.team]
         }
+        index++;
       }
 
-      this.logger.debug(JSON.stringify(engineConf))
+      this.logger.debug(`engineConf: ${JSON.stringify(engineConf)}`)
 
       let [autohostIP, cli] = this.autohostService.startGame(engineConf);
-      if(autohostIP == '::ffff:127.0.0.1') {
+      if(autohostIP.includes("127.0.0.1")) {
         autohostIP = '127.0.0.1'
       } 
       room.responsibleAutohost = autohostIP;
@@ -500,20 +502,20 @@ export class GameService extends LoggerProvider {
         const joined: boolean = await new Promise((resolve, reject) => {
           setTimeout(() => {
             reject(new GameRoomException('MIDJOIN', 'timeout waiting autohost response'))
-          }, 5000)
+          }, 10000)
           cli.ws.on('message', (data, _) => {
             let msg: {
               action: string,
               parameters: {[key: string]: any}
             } = JSON.parse(data.toString())
 
+            this.logger.debug(`receiving msg from autohost: ${msg}`)
+
             if(msg.action == 'midJoined') {
               resolve(true)
             } else if(msg.action == 'joinRejected') {
               resolve(false)
             }
-
-            resolve(false)
           })
         })
 
