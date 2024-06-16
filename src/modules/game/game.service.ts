@@ -539,6 +539,8 @@ export class GameService extends LoggerProvider {
         room: gameName
       });
       releaseFunc = release
+      // release it immediately since we don't change any of the room state
+      release()
 
       if(!Object.keys(room.players).includes(caller)) {
         throw new GameRoomException('LEAVEGAME', 'not a player in this game room');
@@ -561,7 +563,7 @@ export class GameService extends LoggerProvider {
         const joined: boolean = await new Promise((resolve, reject) => {
           setTimeout(() => {
             reject(new GameRoomException('MIDJOIN', 'timeout waiting autohost response'))
-          }, 10000)
+          }, 2000)
           cli.ws.on('message', (data, _) => {
             let msg: {
               action: string,
