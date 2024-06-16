@@ -660,7 +660,9 @@ export class GameService extends LoggerProvider {
   ): Promise<void> {
     // release inactive game room, assumed lock of gameroom is acquired before this
     if (Object.keys(gameRoom.players).length == 0) {
-      this.redisService.remove(`gameRoom:${gameRoom}`)
+      this.logger.debug(`removing game ${gameRoom.title}`)
+      
+      await this.redisService.remove(`gameRoom:${gameRoom.title}`)
       return;
     }
 
