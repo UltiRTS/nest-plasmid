@@ -29,7 +29,7 @@ import { Queue } from 'bull';
 import { StartGameDto } from '@/modules/game/dtos/game.start-game.dto';
 import { HasMapDto } from '@/modules/game/dtos/game.has-map.dto';
 import { LeaveGameDto } from '@/modules/game/dtos/game.leave-game.dto';
-import { flatMap } from 'lodash';
+import { flatMap, snakeCase } from 'lodash';
 import { UserState } from '@/modules/redis/dtos/redis.user.dto';
 import { MidJoinDto } from '@/modules/game/dtos/game.mid-join.dto';
 import { SetModDto } from '@/modules/game/dtos/game.set-mod.dto';

@@ -24,10 +24,13 @@ import { RoomJoinDto } from '../chat/dtos/room.join.dto';
 import { LeaveGameDto } from './dtos/game.leave-game.dto';
 import { MidJoinDto } from './dtos/game.mid-join.dto';
 import { tokenType } from 'yaml/dist/parse/cst';
-import { join } from 'path';
+import { join, relative } from 'path';
 import { KillEngineDto } from './dtos/game.kill-engine.dto';
 import { release } from 'os';
 import { AutoHostMessage } from '../autohost/dtos/autohost.message.dto';
+import { Response } from '@/utils/type.util';
+import { send } from 'process';
+import { ClientsService } from '../clients/clients.service';
 
 type AcquireLockParams = {
   source: string;
@@ -41,6 +44,7 @@ export class GameService extends LoggerProvider {
   constructor(
     private readonly redisService: RedisService,
     private readonly autohostService: AutohostService,
+    private readonly clientService: ClientsService,
   ) {
     super();
   }
@@ -438,6 +442,36 @@ export class GameService extends LoggerProvider {
       if(autohostIP.includes("127.0.0.1")) {
         autohostIP = '127.0.0.1'
       } 
+      cli.ws.on('message', async (data, _) => {
+        let msg: {
+          action: string
+          parameters: {[key:string]: any}
+        } = JSON.parse(data.toString())
+        switch(msg.action) {
+          case 'serverEnding': {
+            room.isStarted = false;
+            await this.synchornizeGameRoomWithRedis(room);
+            const serverEndedMsg: Response<GameRoom> = {
+              status: 'success',
+              action: 'GAMEENDED',
+              path: `user.game`,
+              state: room,
+              seq: -1,
+            }
+            let releaseFunc = undefined;
+            try {
+              const { room, release } = await this.acquireLock({
+                source: 'GAMEENDED',
+                room: gameName,
+              });
+              releaseFunc = release;
+              this.clientService.broadcast(Object.keys(room.players), serverEndedMsg)
+            } finally {
+              if(releaseFunc) releaseFunc()
+            }
+          }
+        }
+      })
       room.responsibleAutohost = autohostIP;
       let res: boolean = await new Promise((resolve, reject) => {
         setTimeout(() => {
