@@ -107,8 +107,9 @@ export class ChatService extends LoggerProvider {
         where: { roomName: chatName },
       });
       const chatRoom = await this.redisService.get<ChatRoomState>(
-        `room:${room.id}`,
+        `room:${room.roomName}`,
       );
+      this.logger.debug(`room: ${room}, obj: ${chatRoom}`)
       chatRoom.members = chatRoom.members.filter(
         (member) => member !== username,
       );
@@ -119,7 +120,7 @@ export class ChatService extends LoggerProvider {
         (chatRoom) => chatRoom !== chatName,
       );
 
-      await this.redisService.set(`room:${room.id}`, chatRoom);
+      await this.redisService.set(`room:${room.roomName}`, chatRoom);
       await this.redisService.set(`userState:${username}`, userState);
 
       return userState.chatRooms;
