@@ -449,21 +449,21 @@ export class GameService extends LoggerProvider {
         } = JSON.parse(data.toString())
         switch(msg.action) {
           case 'serverEnding': {
-            room.isStarted = false;
-            await this.synchornizeGameRoomWithRedis(room);
-            const serverEndedMsg: Response<GameRoom> = {
-              status: 'success',
-              action: 'GAMEENDED',
-              path: `user.game`,
-              state: room,
-              seq: -1,
-            }
             let releaseFunc = undefined;
             try {
               const { room, release } = await this.acquireLock({
                 source: 'GAMEENDED',
                 room: gameName,
               });
+              room.isStarted = false;
+              await this.synchornizeGameRoomWithRedis(room);
+              const serverEndedMsg: Response<GameRoom> = {
+                status: 'success',
+                action: 'GAMEENDED',
+                path: `user.game`,
+                state: room,
+                seq: -1,
+              }
               releaseFunc = release;
               this.clientService.broadcast(Object.keys(room.players), serverEndedMsg)
             } finally {
