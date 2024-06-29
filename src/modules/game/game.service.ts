@@ -466,6 +466,8 @@ export class GameService extends LoggerProvider {
               }
               releaseFunc = release;
               this.clientService.broadcast(Object.keys(room.players), serverEndedMsg)
+            } catch(e) {
+              this.logger.debug(`unable to send gameend: ${e}`)
             } finally {
               if(releaseFunc) releaseFunc()
             }
