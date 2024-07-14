@@ -31,6 +31,7 @@ import { AutoHostMessage } from '../autohost/dtos/autohost.message.dto';
 import { Response } from '@/utils/type.util';
 import { send } from 'process';
 import { ClientsService } from '../clients/clients.service';
+import { DelAiDto } from './dtos/game.del-ai.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -261,6 +262,41 @@ export class GameService extends LoggerProvider {
       } else if (type === 'Chicken') {
         room.chickens[ai] = { team };
       }
+
+      this.logger.debug(JSON.stringify(room))
+      await this.redisService.set(`gameRoom:${gameName}`, room);
+
+      this.synchornizeGameRoomWithRedis(room);
+      return room;
+    } finally {
+      if (releaseFunc) {
+        releaseFunc();
+      }
+    }
+  }
+
+  async delAI(dto: DelAiDto, caller: string): Promise<GameRoom> {
+    const { gameName, ai } = dto;
+    let releaseFunc = undefined;
+    try {
+      const { room, release } = await this.acquireLock({
+        source: 'SET_AI',
+        room: gameName,
+      });
+      releaseFunc = release;
+
+
+      if (room.hoster !== caller) {
+        throw new GameRoomException('SET_AI', 'Only the hoster can del ai.');
+      }
+      if (room.isStarted) {
+        throw new GameRoomException(
+          'SET_AI',
+          'Game has already started, cannot set ai.',
+        );
+      }
+
+      delete room.ais[ai] 
 
       this.logger.debug(JSON.stringify(room))
       await this.redisService.set(`gameRoom:${gameName}`, room);

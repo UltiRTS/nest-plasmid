@@ -35,6 +35,7 @@ import { MidJoinDto } from '@/modules/game/dtos/game.mid-join.dto';
 import { SetModDto } from '@/modules/game/dtos/game.set-mod.dto';
 import { GameBrief } from '@/utils/statedict';
 import { RedisService } from '@/modules/redis/redis.service';
+import { DelAiDto } from '@/modules/game/dtos/game.del-ai.dto';
 type WebSocketClient = WebSocket & {
   id: string;
   userId?: number;
@@ -196,6 +197,34 @@ export class GameGateway extends LoggerProvider {
     const message: Response<GameRoom> = {
       status: 'success',
       action: 'SETAI',
+      path: `user.game`,
+      state: room,
+      seq: -1,
+    };
+    this.broadcastMessage(
+      message,
+      Object.keys(room.players).filter(
+        (username) => username !== client.username,
+      ),
+    );
+    return room;
+  }
+
+  @StatePath('user.game')
+  @UseFilters(new AllExceptionsFilter(), new BaseExceptionsFilter())
+  @UseGuards(new AuthGuard())
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('DELAI')
+  async delAI(
+    @MessageBody() data: DelAiDto,
+    @ConnectedSocket() client: WebSocketClient,
+  ): Promise<GameRoom> {
+    const username = client.username;
+    const room = await this.gameService.delAI(data, username);
+    this.logger.debug(JSON.stringify(room))
+    const message: Response<GameRoom> = {
+      status: 'success',
+      action: 'DELAI',
       path: `user.game`,
       state: room,
       seq: -1,
