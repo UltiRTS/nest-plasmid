@@ -134,6 +134,8 @@ export class GameService extends LoggerProvider {
 
       room.players[playerName].team = team;
 
+      releaseLock() // release before syncing
+
       await this.synchornizeGameRoomWithRedis(room);
 
       await this.redisService.set(`gameRoom:${gameName}`, room);
@@ -280,18 +282,18 @@ export class GameService extends LoggerProvider {
     let releaseFunc = undefined;
     try {
       const { room, release } = await this.acquireLock({
-        source: 'SET_AI',
+        source: 'DEL_AI',
         room: gameName,
       });
       releaseFunc = release;
 
 
       if (room.hoster !== caller) {
-        throw new GameRoomException('SET_AI', 'Only the hoster can del ai.');
+        throw new GameRoomException('DEL_AI', 'Only the hoster can del ai.');
       }
       if (room.isStarted) {
         throw new GameRoomException(
-          'SET_AI',
+          'DEL_AI',
           'Game has already started, cannot set ai.',
         );
       }

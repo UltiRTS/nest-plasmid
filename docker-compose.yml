@@ -1,0 +1,68 @@
+version: '3'
+name: nest-plasmid
+services:
+  plasmid:
+    image: ghcr.io/ultirts/nest-plasmid:nightly
+    pull_policy: always
+    ports:
+      - '8081:8081'
+    environment:
+      - DATA_SOURCE_TYPE=mysql
+      - DATA_SOURCE_HOST=mysql
+      - DATA_SOURCE_PORT=3306
+      - DATA_SOURCE_USERNAME=chan
+      - DATA_SOURCE_PASSWORD=Diy.2002
+      - DATA_SOURCE_DATABASE=plasmid
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, http://localhost:8081/health, -O, /dev/null]
+      start_period: 20s
+      timeout: 10s
+      retries: 10
+  # disable autohost for now
+  # autohost:
+  #   image: ghcr.io/ultirts/ts-autohost:nightly
+  #   pull_policy: always
+  #   ports:
+  #     - '3000-3005:3000-3005'
+  #     - '7000-7005:7000-7005'
+  #     - '3000-3005:3000-3005/udp'
+  #     - '7000-7005:7000-7005/udp'
+  #     - '5000:5000'
+  #   environment:
+  #     - PLASMID_SERVER_HOST=plasmid
+  #     - PLASMID_SERVER_PORT=5000
+  #   depends_on:
+  #     plasmid:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./maps:/autohost/engine/maps
+  #     - ./games:/autohost/engine/games
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 13306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=plasmid
+      - MYSQL_USER=chan
+      - MYSQL_PASSWORD=Diy.2002
+    volumes:
+      - ./volumes/mysql:/var/lib/mysql
+    healthcheck:
+      test: mysqladmin ping -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+      timeout: 20s
+      retries: 10
+  redis:
+    image: redis:3.2
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      timeout: 20s
+      retries: 10
