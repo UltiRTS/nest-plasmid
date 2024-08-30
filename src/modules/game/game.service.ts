@@ -32,6 +32,7 @@ import { Response } from '@/utils/type.util';
 import { send } from 'process';
 import { ClientsService } from '../clients/clients.service';
 import { DelAiDto } from './dtos/game.del-ai.dto';
+import { convertToLuaTable } from '@/utils/lua';
 
 type AcquireLockParams = {
   source: string;
@@ -423,6 +424,25 @@ export class GameService extends LoggerProvider {
         }
       }
 
+      
+      const modoptions = {}
+      if(room.mod === 'unitlevelup.sdd') {
+        let pwStructure = {
+          "Planetary Defence Grid": {
+          "unitname": "pw_grid",
+          "owner": room.hoster,
+          "canBeEvacuated": true,
+          "canBeDestroyed": true,
+          "isInactive": false,
+          "name": `${room.hoster} Planetary Defence Grid`,
+          "description": ""
+          }
+        }
+        let pwStructures = [pwStructure,]
+        let pwRaw = convertToLuaTable(pwStructures)
+        let pwBase64 = Buffer.from(pwRaw).toString('base64')
+        modoptions['planetwarsStructures'] = pwBase64
+      }
       // setup payload to Autohost
       const engineConf: GameConf = {
         id: room.id,
@@ -432,7 +452,8 @@ export class GameService extends LoggerProvider {
         mapId: room.mapId,
         aiHosters: [0],
         team: {},
-        mod: room.mod
+        mod: room.mod,
+        modoptions: modoptions,
       };
 
       let index = 0;
@@ -674,7 +695,8 @@ export class GameService extends LoggerProvider {
       mapId: room.mapId,
       aiHosters: [],
       team: {},
-      mod: 'mod.sdd'
+      mod: 'mod.sdd',
+      modoptions: {}
     };
     // teamMapping tracks each Team to a number as id
 
