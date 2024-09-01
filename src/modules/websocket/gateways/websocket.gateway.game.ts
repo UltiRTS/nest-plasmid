@@ -326,6 +326,19 @@ export class GameGateway extends LoggerProvider {
         (username) => username !== client.username,
       ),
     );
+    // update state.games for all
+    if(Object.keys(room.players).length === 0) {
+      const gameRoomUpdateMessage: Response<GameBrief[]> = {
+        status: 'success',
+        action: 'LEAVEGAME',
+        path: 'games',
+        state: await this.redisService.getAllGameRooms(),
+        seq: -1
+      }
+      const onlinePlayers = await this.redisService.getAllOnlineUsers()
+      this.broadcastMessage(gameRoomUpdateMessage, onlinePlayers)
+    }
+
     this.logger.debug("leaved game")
     return user;
   }
