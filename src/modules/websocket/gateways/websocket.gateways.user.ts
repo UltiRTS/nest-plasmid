@@ -55,7 +55,13 @@ export class UserGateway extends LoggerProvider {
     @ConnectedSocket() client: WebSocketClient,
   ): Promise<State> {
     this.logger.debug('register: ', data);
-    const user = await this.userService.register(data);
+    let user = await this.userService.register(data);
+    user = await this.userService.login({...data, clientId: client.id});
+
+    client.userId = user.id;
+    client.username = user.username;
+    this.clientsService.set(user.username, client);
+
     return await this.redisService.dump(user.username);
   }
 

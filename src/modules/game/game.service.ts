@@ -375,6 +375,7 @@ export class GameService extends LoggerProvider {
 
       await this.redisService.set<UserState>(`userState:${caller}`, player)
       await this.synchornizeGameRoomWithRedis(room);
+
       return {
         room,
         user: player
@@ -428,7 +429,7 @@ export class GameService extends LoggerProvider {
       const modoptions = {}
       if(room.mod === 'unitlevelup.sdd') {
         let pwStructure = {
-          "Planetary Defence Grid": {
+          "pw_grid": {
           "unitname": "pw_grid",
           "owner": room.hoster,
           "canBeEvacuated": true,
@@ -440,6 +441,7 @@ export class GameService extends LoggerProvider {
         }
         let pwStructures = [pwStructure,]
         let pwRaw = convertToLuaTable(pwStructures)
+        this.logger.debug(pwRaw)
         let pwBase64 = Buffer.from(pwRaw).toString('base64')
         modoptions['planetwarsStructures'] = pwBase64
       }
@@ -754,12 +756,12 @@ export class GameService extends LoggerProvider {
   private async synchornizeGameRoomWithRedis(
     gameRoom: GameRoom,
   ): Promise<void> {
+    let deleteRoom = Object.keys(gameRoom.players).length == 0;
     // release inactive game room, assumed lock of gameroom is acquired before this
-    if (Object.keys(gameRoom.players).length == 0) {
+    if (deleteRoom) {
       this.logger.debug(`removing game ${gameRoom.title}`)
       
       await this.redisService.remove(`gameRoom:${gameRoom.title}`)
-      return;
     }
 
     const lockGuards = await Promise.all(
@@ -772,7 +774,7 @@ export class GameService extends LoggerProvider {
     );
     lockGuards.forEach((guard) => {
       const player = guard.player;
-      player.game = gameRoom;
+      player.game = deleteRoom ? null : gameRoom;
     });
     await Promise.all(
       lockGuards.map((guard) => {
