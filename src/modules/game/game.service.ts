@@ -440,10 +440,12 @@ export class GameService extends LoggerProvider {
           }
         }
         let pwStructures = [pwStructure,]
-        let pwRaw = convertToLuaTable(pwStructures)
+        // let pwRaw = convertToLuaTable(pwStructures)
+        let pwRaw = `{ ["pw_grid"] = { unitname = "pw_grid", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure" }, }`
         this.logger.debug(pwRaw)
         let pwBase64 = Buffer.from(pwRaw).toString('base64')
-        modoptions['planetwarsStructures'] = pwBase64
+        modoptions['planetwarsstructures'] = pwBase64
+        modoptions['planet'] = true
       }
       // setup payload to Autohost
       const engineConf: GameConf = {
