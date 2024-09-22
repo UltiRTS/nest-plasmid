@@ -16,10 +16,12 @@ export class GameRoom {
   autohostPort = 0;
   aiHosters: string[] = [];
   mod = 'mod.sdd';
+  prespawns: {[key: string]: PreSpawn};
   constructor(data: Partial<GameRoomConstructorParams>) {
     Object.assign(this, data);
     // this.engineToken = uniqueId();
     this.players = {};
+    this.prespawns = {};
   }
 }
 
@@ -36,4 +38,10 @@ export interface GameRoomPlayer {
   isSpec: boolean;
   team: string;
   hasmap: boolean;
+}
+
+export interface PreSpawn {
+  unitName: string;
+  coordinates: number[];
+  owner: string
 }

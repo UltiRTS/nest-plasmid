@@ -1,7 +1,7 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { JoinGameDto } from './dtos/game.join.dto';
-import { GameRoom } from './dtos/game.game-room.dto';
+import { GameRoom, PreSpawn } from './dtos/game.game-room.dto';
 import { SetMapDto } from './dtos/game.set-map.dto';
 import { SetModDto } from './dtos/game.set-mod.dto';
 import {
@@ -33,6 +33,7 @@ import { send } from 'process';
 import { ClientsService } from '../clients/clients.service';
 import { DelAiDto } from './dtos/game.del-ai.dto';
 import { convertToLuaTable } from '@/utils/lua';
+import { SetPreSpawnDto } from './dtos/game.set-prespawn.dto';
 
 type AcquireLockParams = {
   source: string;
@@ -382,6 +383,43 @@ export class GameService extends LoggerProvider {
       };
     } finally {
       if(releaseFunc) {
+        releaseFunc()
+      }
+    }
+  }
+
+  async setPrespawn(dto: SetPreSpawnDto, caller: string): Promise<GameRoom> {
+    const { gameName } = dto;
+    let releaseFunc = undefined;
+    try {
+      const {room, release} = await this.acquireLock({
+        source: 'SET_PRESPAWN',
+        room: gameName
+      })
+      releaseFunc = release
+      if (!room) {
+        throw new GameRoomException(
+          'STARTGAME',
+          'Game room does not exist, cannot start.',
+        );
+      }
+      if (room.hoster !== caller) {
+        throw new GameRoomException(
+          'STARTGAME',
+          'Only the hoster can start the game.',
+        );
+      }
+      room.prespawns[dto.gameName] = {
+        unitName: dto.uname,
+        coordinates: [dto.x, dto.y],
+        owner: dto.owner
+      } as PreSpawn
+
+      await this.synchornizeGameRoomWithRedis(room);
+
+      return room
+    } finally {
+      if(releaseFunc){
         releaseFunc()
       }
     }
