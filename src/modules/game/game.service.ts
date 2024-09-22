@@ -409,7 +409,9 @@ export class GameService extends LoggerProvider {
           'Only the hoster can start the game.',
         );
       }
-      room.prespawns[dto.gameName] = {
+
+      let n = Object.keys(room.prespawns).length;
+      room.prespawns[n+1] = {
         unitName: dto.uname,
         coordinates: [dto.x, dto.y],
         owner: dto.owner
@@ -478,8 +480,18 @@ export class GameService extends LoggerProvider {
           }
         }
         let pwStructures = [pwStructure,]
-        // let pwRaw = convertToLuaTable(pwStructures)
-        let pwRaw = `{ ["pw_grid"] = { unitname = "pw_grid", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure" }, }`
+
+        // let pwRaw = `{ ["pw_grid"] = { unitname = "pw_grid", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure" }, }`
+        let unitRaws = ''
+        for(let i=0; i<Object.keys(room.prespawns).length; i++) {
+          let prespawn = room.prespawns[i]
+          let unitname = prespawn.unitName;
+          let x = prespawn.coordinates[0];
+          let y = prespawn.coordinates[1];
+          let unitRaw = `["${unitname}"] = { unitname = "${unitname}", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
+          unitRaws += unitRaw
+        }
+        let pwRaw = '{' + unitRaws + '}';
         this.logger.debug(pwRaw)
         let pwBase64 = Buffer.from(pwRaw).toString('base64')
         modoptions['planetwarsstructures'] = pwBase64
