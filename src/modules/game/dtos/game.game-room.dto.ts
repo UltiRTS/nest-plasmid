@@ -16,18 +16,11 @@ export class GameRoom {
   autohostPort = 0;
   aiHosters: string[] = [];
   mod = 'mod.sdd';
-  prespawns: {[key: number]: PreSpawn};
+  prespawns: {[key: string]: PreSpawn} = {};
   constructor(data: Partial<GameRoomConstructorParams>) {
     Object.assign(this, data);
     // this.engineToken = uniqueId();
     this.players = {};
-    this.prespawns = {
-      0: {
-        owner: 'test',
-        unitName: 'pw_grid',
-        coordinates: [0, 0]
-      }
-    };
   }
 }
 

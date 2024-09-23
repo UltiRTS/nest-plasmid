@@ -411,13 +411,19 @@ export class GameService extends LoggerProvider {
       }
 
       let n = Object.keys(room.prespawns).length;
-      room.prespawns[n+1] = {
+      this.logger.debug(`num of prespawns existing: ${n}`)
+      this.logger.debug(`prespanws: ${JSON.stringify(room.prespawns)}`)
+      room.prespawns[String(n)] = {
         unitName: dto.uname,
         coordinates: [dto.x, dto.y],
         owner: dto.owner
-      } as PreSpawn
+      }
 
+      await this.redisService.set<GameRoom>(`gameRoom:${gameName}`, room)
       await this.synchornizeGameRoomWithRedis(room);
+
+      this.logger.debug(`prespanws: ${Object.keys(room.prespawns)}`)
+      this.logger.debug(`prespanws: ${JSON.stringify(room.prespawns)}`)
 
       return room
     } finally {
@@ -484,11 +490,11 @@ export class GameService extends LoggerProvider {
         // let pwRaw = `{ ["pw_grid"] = { unitname = "pw_grid", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure" }, }`
         let unitRaws = ''
         for(let i=0; i<Object.keys(room.prespawns).length; i++) {
-          let prespawn = room.prespawns[i]
+          let prespawn = room.prespawns[String(i)]
           let unitname = prespawn.unitName;
           let x = prespawn.coordinates[0];
           let y = prespawn.coordinates[1];
-          let unitRaw = `["${unitname}"] = { unitname = "${unitname}", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
+          let unitRaw = `["${unitname}-${i}"] = { unitname = "${unitname}", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
           unitRaws += unitRaw
         }
         let pwRaw = '{' + unitRaws + '}';
