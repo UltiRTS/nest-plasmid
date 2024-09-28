@@ -76,9 +76,7 @@ export class WebsocketAdapter extends WsAdapter {
     }
 
     const result = messageHandler.callback({ ...message.parameters, seq });
-    console.log({ event2StatePath });
     let statePath = event2StatePath[action];
-    console.log({ action, statePath });
     statePath = statePath ?? '';
     return process(
       firstValueFrom(
@@ -95,7 +93,7 @@ export class WebsocketAdapter extends WsAdapter {
                 state: result,
                 seq,
               };
-              console.log(resp);
+              console.log({action, statePath: resp.path, resp })
               return resp;
             }),
           ),
