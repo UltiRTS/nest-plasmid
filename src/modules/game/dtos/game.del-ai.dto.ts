@@ -8,4 +8,8 @@ export class DelAiDto {
   @IsString({ message: 'aiId must be a string' })
   @IsNotEmpty({ message: 'aiId cannot be empty' })
   ai: string;
+
+  @IsString({ message: 'caller must be a string' })
+  @IsNotEmpty({ message: 'caller cannot be empty' })
+  type: string;
 }

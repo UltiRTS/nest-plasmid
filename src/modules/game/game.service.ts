@@ -300,7 +300,11 @@ export class GameService extends LoggerProvider {
         );
       }
 
-      delete room.ais[ai] 
+      if (dto.type === 'ai') {
+        delete room.ais[ai] 
+      } else {
+        delete room.chickens[ai]
+      }
 
       this.logger.debug(JSON.stringify(room))
       await this.redisService.set(`gameRoom:${gameName}`, room);
