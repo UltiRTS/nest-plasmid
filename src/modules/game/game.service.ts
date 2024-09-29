@@ -92,7 +92,9 @@ export class GameService extends LoggerProvider {
         hasmap: false,
       };
 
+      user.game = room;
       await this.redisService.set<GameRoom>(`gameRoom:${gameName}`, room)
+      await this.redisService.set<UserState>(`userState:${caller}`, user)
       return room;
     } finally {
       await this.redisService.unlock(`lock:gameRoom:${gameName}`);

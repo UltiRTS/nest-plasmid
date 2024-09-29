@@ -24,6 +24,6 @@ export class PingGateway extends LoggerProvider {
     @MessageBody() data: any,
     @ConnectedSocket() client: WebSocketClient,
   ): Promise<PingResponse> {
-    return this.pingService.ping();
+    return this.pingService.ping(client.username);
   }
 }
