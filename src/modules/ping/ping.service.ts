@@ -21,7 +21,14 @@ export class PingService extends LoggerProvider {
     this.lastResponse = new Map();
   }
 
-  async ping(username: string): Promise<PingResponse> {
+  async ping(username: string | undefined): Promise<PingResponse> {
+    if(username === undefined) {
+      return {
+        action: 'PONG',
+        parameters: {},
+      };
+    }
+    
     let now = Date.now()
     if(this.lastResponse.get(username) === undefined) {
       this.lastResponse.set(username, now)
