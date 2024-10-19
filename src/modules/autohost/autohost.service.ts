@@ -6,7 +6,7 @@ import { GameConf } from '../game/game.type';
 import { createHash } from 'crypto';
 import { HostedGame } from './autohost.types';
 import { Game } from '../game/game.entity';
-import { AutoHostMessage } from './dtos/autohost.message.dto';
+import { AutoHostMessage, CMDParams } from './dtos/autohost.message.dto';
 
 interface AutohostClient {
   ws: WebSocketClient;
@@ -53,6 +53,13 @@ export class AutohostService extends LoggerProvider {
     autohost.ws.send(JSON.stringify(msg))
 
     return [autohost.autohost, this.autohosts[autohost.autohost], true]
+  }
+
+  cmd(command: AutoHostMessage) {
+    const params = command.parameters as CMDParams 
+    let autohost = this.hostGamesById[params.id]
+    console.log(`sending cmd(${params.cmd}) to engine`)
+    autohost.ws.send(JSON.stringify(command))
   }
 
   startGame(conf: GameConf): [string, AutohostClient] {

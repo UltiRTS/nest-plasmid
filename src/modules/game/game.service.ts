@@ -27,7 +27,7 @@ import { tokenType } from 'yaml/dist/parse/cst';
 import { join, relative } from 'path';
 import { KillEngineDto } from './dtos/game.kill-engine.dto';
 import { release } from 'os';
-import { AutoHostMessage } from '../autohost/dtos/autohost.message.dto';
+import { AutoHostMessage, CMDParams } from '../autohost/dtos/autohost.message.dto';
 import { Response } from '@/utils/type.util';
 import { send } from 'process';
 import { ClientsService } from '../clients/clients.service';
@@ -416,17 +416,18 @@ export class GameService extends LoggerProvider {
         );
       }
 
-      let n = Object.keys(room.prespawns).length;
-      this.logger.debug(`num of prespawns existing: ${n}`)
-      this.logger.debug(`prespanws: ${JSON.stringify(room.prespawns)}`)
-      room.prespawns[String(n)] = {
-        unitName: dto.uname,
-        coordinates: [dto.x, dto.y],
-        owner: dto.owner
+      const cmd = {
+        id: room.id,
+        title: room.title,
+        cmd: `spawnunit ${dto.uname} ${dto.x} ${dto.y} 0`
+      } as CMDParams
+
+      const msg: AutoHostMessage = {
+        action: 'cmd',
+        parameters: cmd
       }
 
-      await this.redisService.set<GameRoom>(`gameRoom:${gameName}`, room)
-      await this.synchornizeGameRoomWithRedis(room);
+      this.autohostService.cmd(msg)
 
       this.logger.debug(`prespanws: ${Object.keys(room.prespawns)}`)
       this.logger.debug(`prespanws: ${JSON.stringify(room.prespawns)}`)
@@ -481,8 +482,8 @@ export class GameService extends LoggerProvider {
       const modoptions = {}
       if(room.mod === 'unitlevelup.sdd') {
         let pwStructure = {
-          "pw_grid": {
-          "unitname": "pw_grid",
+          "turretantiheavy": {
+          "unitname": "turretantiheavy",
           "owner": room.hoster,
           "canBeEvacuated": true,
           "canBeDestroyed": true,
@@ -500,7 +501,8 @@ export class GameService extends LoggerProvider {
           let unitname = prespawn.unitName;
           let x = prespawn.coordinates[0];
           let y = prespawn.coordinates[1];
-          let unitRaw = `["${unitname}-${i}"] = { unitname = "${unitname}", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
+          // let unitRaw = `["${unitname}-${i}"] = { unitname = "${unitname}", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
+          let unitRaw = `["Gauss"] = { unitname = "Gauss", owner = "${room.hoster}", canBeEvacuated = true, canBeDestroyed = false, isInactive = false, name = "Owner1 StructureName (Owner1)", description = "Description of the structure", x = ${x}, y = ${y}},`
           unitRaws += unitRaw
         }
         let pwRaw = '{' + unitRaws + '}';
