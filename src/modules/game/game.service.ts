@@ -419,7 +419,7 @@ export class GameService extends LoggerProvider {
       const cmd = {
         id: room.id,
         title: room.title,
-        cmd: `spawnunit ${dto.uname} ${dto.x} ${dto.y} 0`
+        cmd: `/luarules spawnunit ${dto.uname} ${dto.x} ${dto.y} 0`
       } as CMDParams
 
       const msg: AutoHostMessage = {
