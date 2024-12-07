@@ -343,11 +343,11 @@ export class GameGateway extends LoggerProvider {
   ): Promise<UserState> {
     const username = client.username;
     const {room, user} = await this.gameService.leaveGame(data, username)
-    const message: Response<UserState> = {
+    const message: Response<GameRoom> = {
       status: 'success',
       action: 'LEAVEGAME',
-      path: `user`,
-      state: null,
+      path: `user.game`,
+      state: room,
       seq: -1,
     };
     this.broadcastMessage(
