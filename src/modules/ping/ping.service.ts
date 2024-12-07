@@ -32,7 +32,7 @@ export class PingService extends LoggerProvider {
     let now = Date.now()
     if(this.lastResponse.get(username) === undefined) {
       this.lastResponse.set(username, now)
-      this.logger.debug(`updating ${username} to ${now}`)
+      // this.logger.debug(`updating ${username} to ${now}`)
       let intervalHandler = setInterval(async () => {
         let now = Date.now();
         let timePrevPing = this.lastResponse.get(username);
@@ -45,7 +45,7 @@ export class PingService extends LoggerProvider {
         }
       }, 1000);
     } else {
-      this.logger.debug(`updating ${username} to ${now}`)
+      // this.logger.debug(`updating ${username} to ${now}`)
       this.lastResponse.set(username, now)
     }
 
