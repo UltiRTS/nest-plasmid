@@ -93,7 +93,9 @@ export class WebsocketAdapter extends WsAdapter {
                 state: result,
                 seq,
               };
-              console.log({action, statePath: resp.path, resp })
+              if (action != 'PING'){
+                console.log({action, statePath: resp.path, resp })
+              }
               return resp;
             }),
           ),
