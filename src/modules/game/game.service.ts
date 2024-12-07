@@ -73,6 +73,9 @@ export class GameService extends LoggerProvider {
       if (user === null || user === undefined) {
         throw new JoinGameExcption('User not found.');
       }
+      if(user.game != null) {
+        throw new JoinGameExcption('Cannot join without leaving previous game');
+      }
 
       let room = await this.redisService.get<GameRoom | null | undefined>(
         `gameRoom:${gameName}`,
