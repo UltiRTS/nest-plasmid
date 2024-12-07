@@ -384,6 +384,7 @@ export class GameService extends LoggerProvider {
       player.game = null;
 
       await this.redisService.set<UserState>(`userState:${caller}`, player)
+      await this.redisService.set<GameRoom>(`gameRoom:${gameName}`, room)
       await this.synchornizeGameRoomWithRedis(room);
 
       return {
